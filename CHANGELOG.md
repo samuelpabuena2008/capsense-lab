@@ -2,6 +2,14 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.3.0] - 2026-10-29
+
+### Aplicación de escritorio
+- Abre en su propia ventana (pywebview + WebView2) en vez del navegador. `CapSense Lab.pyw` y el comando `capsense-app` la lanzan sin consola. `--navegador` y `--servidor` conservan los modos anteriores.
+- Nuevo diseño con la skill ui-ux-pro-max: barra lateral con cuatro vistas (Medición, Cálculos, Historial, Conexión), estado del equipo y botón Medir siempre visibles, vista de medición sin scroll a 1440×900.
+- Tipografía Segoe UI Variable + Cascadia Code (sin descargas), íconos SVG propios, barra de progreso durante la medición, avisos como toasts, foco visible y movimiento reducido.
+- Atajos: M medir, 1–4 vistas, F11 pantalla completa.
+
 ## [0.2.0] - 2026-10-29
 
 ### Firmware v2.3

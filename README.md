@@ -1,10 +1,10 @@
 # CapSense Lab
 
-Medidor de capacitancia RC (1 µF a 1000 µF) con Arduino Uno, y un dashboard en Python para mostrar en proyector el resultado, la curva de carga y los cálculos paso a paso.
+Medidor de capacitancia RC (1 µF a 1000 µF) con Arduino Uno, y una aplicación de escritorio en Python para mostrar en proyector el resultado, la curva de carga y los cálculos paso a paso.
 
 Proyecto de Samuel y Joel (Ingeniería de Sistemas, Universidad del Norte) para la GeoExpo de Física.
 
-![Dashboard en modo demo: resultado de 100.45 µF y curva de carga con t1, t2, τ y la meseta](docs/img/dashboard.jpg)
+![Aplicación en modo demo: barra lateral, resultado de 100.33 µF, curva de carga y C de cada prueba](docs/img/dashboard.jpg)
 
 ## Qué muestra
 
@@ -15,9 +15,13 @@ Proyecto de Samuel y Joel (Ingeniería de Sistemas, Universidad del Norte) para 
 
 ![Panel de cálculos paso a paso](docs/img/pasos.jpg)
 
+## Diseño
+
+El estilo sigue la skill [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill): **Dark Mode (OLED) + Data-Dense Dashboard + Real-Time Monitoring**, con el par tipográfico *Dashboard Data* (sans para etiquetas, monoespaciada para los valores), íconos SVG en vez de emojis, estados con texto además de color, foco visible con teclado y respeto por `prefers-reduced-motion`.
+
 ## Instalación
 
-Requiere Python 3.10 o más reciente.
+Requiere Python 3.10 o más reciente. En Windows la ventana usa WebView2 (incluido en Windows 11).
 
 ```bash
 git clone https://github.com/samuelpabuena2008/capsense-lab.git
@@ -31,11 +35,21 @@ En Linux o macOS, activa el entorno con `source .venv/bin/activate`.
 
 ## Uso
 
+Doble clic en **`CapSense Lab.pyw`**: se abre la aplicación en su propia ventana (sin consola ni navegador). También:
+
 ```bash
 python -m capsense --demo
 ```
 
-Abre el navegador en http://127.0.0.1:8050. Otras formas:
+La app tiene cuatro vistas en la barra lateral: **Medición**, **Cálculos**, **Historial** y **Conexión** (fuente de datos, simulador y consola serie). El estado del equipo y el botón **Medir** quedan siempre visibles.
+
+| Tecla | Acción |
+|---|---|
+| `M` | Medir |
+| `1` a `4` | Cambiar de vista |
+| `F11` | Pantalla completa (para el proyector) |
+
+Otras formas de arrancar:
 
 | Comando | Qué hace |
 |---|---|
@@ -43,9 +57,10 @@ Abre el navegador en http://127.0.0.1:8050. Otras formas:
 | `python -m capsense --port auto` | Arduino real, autodetecta el puerto. |
 | `python -m capsense --port COM3 --baud 9600` | Arduino con el firmware v2.1. |
 | `python -m capsense --replay logs/sesion_..._serial.log` | Reproduce una sesión guardada (log serial o `*_pruebas.csv`). |
-| `python -m capsense --host 0.0.0.0` | Permite abrir el dashboard desde otro equipo de la red. |
+| `python -m capsense --navegador` | Abre en el navegador en vez de la ventana de la app. |
+| `python -m capsense --servidor --host 0.0.0.0` | Solo el servidor, para abrirlo desde otro equipo de la red. |
 
-Todo eso también se elige desde la barra superior del dashboard. Opciones: `python -m capsense --help`.
+Todo eso también se elige en la vista **Conexión**. Tras `pip install -e .` existe además el comando `capsense-app`, que abre la ventana sin consola. Opciones: `python -m capsense --help`.
 
 ### En el Arduino
 
@@ -62,7 +77,8 @@ src/capsense/
 ├── domain/      modelos, física (réplica del firmware) y pasos de cálculo — sin serial ni UI
 ├── io/          parser del protocolo y fuentes: serial, simulador, replay
 ├── services/    sesión (estado, hilo seguro) y logs/exportación
-└── ui/          Dash: layout, callbacks, gráficas, fórmulas, estilo
+├── ui/          Dash: layout, callbacks, gráficas, fórmulas, estilo, íconos SVG
+└── desktop.py   ventana de escritorio (pywebview) con el servidor en un hilo
 firmware/        capsense_lab_v2_1, v2_2 y v2_3
 tests/           unit/, integration/, fixtures/
 docs/            arquitectura, protocolo serie, cálculos
@@ -91,7 +107,8 @@ ruff check src tests
 | El botón Medir está apagado | Con la v2.1, en replay o mientras mide no se puede. Usa START en el Arduino. |
 | Aviso de calibración distinta | `config/capsense.toml` y el firmware tienen valores diferentes. Corrige uno de los dos. |
 | Se soltó el cable | El dashboard reintenta solo (1, 2, 4, 8 s). La medición en curso queda marcada como interrumpida. |
-| Sin internet en la expo | No hace falta: Dash, Plotly y MathJax se sirven desde tu PC. |
+| Sin internet en la expo | No hace falta: Dash, Plotly, MathJax y las fuentes (Segoe UI Variable, Cascadia Code) están en tu PC. |
+| La ventana no abre | Falta WebView2 (viene con Windows 11 y Edge). La app cae sola al navegador; también puedes usar `--navegador`. |
 | Fórmulas sin formato | Recarga la página (F5). |
 
 ## Exactitud

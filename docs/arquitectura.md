@@ -52,6 +52,10 @@ stateDiagram-v2
 
 Con el firmware v2.1 no hay `#PRUEBA_INI`: el estado pasa a *Midiendo* con la cabecera de la tabla y a *Listo* con la línea CSV del resultado.
 
+## Ventana de escritorio
+
+`desktop.py` levanta el servidor de Dash con `werkzeug.make_server` en un hilo, solo en `127.0.0.1` y en un puerto libre, y abre una ventana de pywebview (WebView2 en Windows). Al cerrar la ventana se apaga el servidor, se suelta el puerto serie y se cierran los logs. La página puede llamar a Python con `window.pywebview.api` (por ejemplo, pantalla completa). Con `--navegador` o `--servidor` se usa el servidor de Dash de siempre.
+
 ## Archivos que genera una sesión
 
 En `logs/` (fuera de git):
