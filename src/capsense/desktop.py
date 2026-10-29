@@ -41,11 +41,11 @@ class ApiVentana:
     """Funciones que la página puede llamar con window.pywebview.api.<nombre>()."""
 
     def __init__(self) -> None:
-        self.ventana = None
+        self._ventana = None   # privado: pywebview no expone ni recorre atributos con _
 
     def pantalla_completa(self) -> None:
-        if self.ventana is not None:
-            self.ventana.toggle_fullscreen()
+        if self._ventana is not None:
+            self._ventana.toggle_fullscreen()
 
 
 def abrir_ventana(url: str, al_cerrar: Callable[[], None], debug: bool = False) -> bool:
@@ -61,10 +61,10 @@ def abrir_ventana(url: str, al_cerrar: Callable[[], None], debug: bool = False) 
         TITULO, url, js_api=api, width=1440, height=900, min_size=(1100, 700),
         background_color=FONDO, text_select=True,
     )
-    api.ventana = ventana
+    api._ventana = ventana
     ventana.events.closed += al_cerrar
     try:
-        webview.start(debug=debug, private_mode=False)
+        webview.start(debug=debug, private_mode=True)   # perfil temporal: sin choques entre sesiones
     except Exception:  # noqa: BLE001 - p. ej. sin WebView2: se cae al navegador
         log.exception("No se pudo abrir la ventana nativa")
         return False

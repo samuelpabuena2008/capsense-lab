@@ -89,7 +89,8 @@ def main(argv: list[str] | None = None) -> int:
         # Modo aplicación: ventana propia con el servidor en un hilo, solo en 127.0.0.1
         from capsense import desktop
 
-        puerto = desktop.puerto_libre("127.0.0.1", puerto)
+        # Puerto aleatorio: ninguna pestaña vieja del navegador puede colarse en la sesión
+        puerto = desktop.puerto_libre("127.0.0.1", args.http_port or 0)
         servidor = desktop.iniciar_servidor(app.server, "127.0.0.1", puerto)
         url = f"http://127.0.0.1:{puerto}"
         try:
