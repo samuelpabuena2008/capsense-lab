@@ -1,0 +1,4 @@
+=== CapSense Lab v2.1 ===
+Rango: 1 uF a 1000 uF. Pulsa START para medir.
+prueba,R,meseta,tau_ms,C_uF
+1,10k,993.3,1001.524,102.040

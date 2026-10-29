@@ -1,0 +1,20 @@
+=== CapSense Lab v2.1 ===
+Rango: 1 uF a 1000 uF. Pulsa START para medir.
+prueba,R,meseta,tau_ms,C_uF
+1,10k,1010.8,462.144,47.085
+2,10k,1013.1,463.350,47.208
+3,10k,1006.4,458.427,46.707
+4,10k,1002.7,455.706,46.430
+5,10k,1011.9,462.436,47.115
+---------- RESULTADO ----------
+Pruebas   = 5
+R carga   = 9815.0 ohm
+V entrada = 4.92 V
+tau       = 460.413 ms
+C         = 46.909 uF  (+/- 0.83 %)
+C min/max = 46.430 / 47.208 uF
+Q         = 230.793 uC
+E         = 567.750 uJ
+Meseta    = 98.6 %
+CSV (tau_ms,C_uF,Q_uC,E_uJ,incert_pct,meseta_pct,R_ohm):
+460.413,46.909,230.793,567.750,0.83,98.6,9815

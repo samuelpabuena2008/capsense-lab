@@ -1,0 +1,12 @@
+#VERSION,2.2
+#CONFIG,4.92,9790,996000,25.0,1.000,250,700
+=== CapSense Lab v2.2 ===
+Rango: 1 uF a 1000 uF. Pulsa START o envia M para medir.
+#LISTO
+#INICIO,5
+#RANGO,0,10k,9815
+prueba,R,meseta,tau_ms,C_uF
+#PRUEBA_INI,1,0
+#ERROR,4,Fuga muy alta
+ERROR: Fuga muy alta
+#LISTO
