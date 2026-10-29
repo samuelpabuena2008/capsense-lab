@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -15,9 +16,10 @@ def configurar(carpeta_logs: Path | None = None, debug: bool = False) -> None:
     for h in list(raiz.handlers):
         raiz.removeHandler(h)
 
-    consola = logging.StreamHandler()
-    consola.setFormatter(logging.Formatter(FORMATO, "%H:%M:%S"))
-    raiz.addHandler(consola)
+    if sys.stderr is not None:          # con pythonw no hay consola
+        consola = logging.StreamHandler()
+        consola.setFormatter(logging.Formatter(FORMATO, "%H:%M:%S"))
+        raiz.addHandler(consola)
 
     if carpeta_logs is not None:
         carpeta_logs.mkdir(parents=True, exist_ok=True)

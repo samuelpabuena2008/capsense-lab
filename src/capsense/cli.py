@@ -30,7 +30,11 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("--config", type=Path, help="archivo TOML de configuración (por defecto config/capsense.toml)")
     p.add_argument("--host", help="interfaz HTTP (por defecto 127.0.0.1; 0.0.0.0 para verlo desde otro equipo)")
     p.add_argument("--http-port", type=int, help="puerto HTTP del dashboard (por defecto 8050)")
-    p.add_argument("--no-browser", action="store_true", help="no abrir el navegador al arrancar")
+    vista = p.add_mutually_exclusive_group()
+    vista.add_argument("--navegador", action="store_true",
+                       help="abrir en el navegador en vez de la ventana de la aplicación")
+    vista.add_argument("--servidor", "--no-browser", dest="servidor", action="store_true",
+                       help="solo el servidor, sin ventana ni navegador (para verlo desde otro equipo)")
     p.add_argument("--debug", action="store_true", help="logs detallados")
     p.add_argument("--version", action="version", version=f"capsense {__version__}")
     return p
@@ -75,16 +79,45 @@ def main(argv: list[str] | None = None) -> int:
 
     host = args.host or cfg.ui.host
     puerto = args.http_port or cfg.ui.puerto_http
+
+    def cerrar() -> None:
+        ctl.desconectar()
+        if session.storage is not None:
+            session.storage.cerrar()
+
+    if not (args.navegador or args.servidor):
+        # Modo aplicación: ventana propia con el servidor en un hilo, solo en 127.0.0.1
+        from capsense import desktop
+
+        puerto = desktop.puerto_libre("127.0.0.1", puerto)
+        servidor = desktop.iniciar_servidor(app.server, "127.0.0.1", puerto)
+        url = f"http://127.0.0.1:{puerto}"
+        try:
+            if desktop.abrir_ventana(url, cerrar, debug=args.debug):
+                return 0
+            log.warning("Sin ventana nativa: abro el dashboard en el navegador")
+            webbrowser.open(url)
+            threading.Event().wait()          # hasta Ctrl+C
+        except KeyboardInterrupt:
+            pass
+        finally:
+            servidor.shutdown()
+            cerrar()
+        return 0
+
     url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '') else host}:{puerto}"
     log.info("Dashboard en %s (Ctrl+C para salir)", url)
-    if not args.no_browser:
+    if args.navegador:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     try:
         app.run(host=host, port=puerto, debug=False)
     except KeyboardInterrupt:
         pass
     finally:
-        ctl.desconectar()
-        if session.storage is not None:
-            session.storage.cerrar()
+        cerrar()
     return 0
+
+
+def main_app() -> int:
+    """Entrada sin consola (pythonw): abre la ventana de la aplicación."""
+    return main([])
