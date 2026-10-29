@@ -129,12 +129,12 @@ class FirmwareSim:
         n1, n2 = c.adc_n1, c.adc_n2
         t1 = t2 = 0
         muestras: list[tuple[int, int]] = []
-        t_obj = T_MUESTRA0_US
+        t_obj = int(T_MUESTRA0_US)
         extendiendo = False
         for dt, adc in self._bucle(tau_us, P):
             if len(muestras) < N_MUESTRAS and dt >= t_obj:
                 muestras.append((dt, adc))
-                t_obj *= RAZON_MUESTRA
+                t_obj = int(t_obj * RAZON_MUESTRA)   # unsigned long en el Arduino
             if extendiendo:
                 if adc >= ADC_EXT_FIN or dt - t2 > EXT_MAX_US or len(muestras) >= N_MUESTRAS \
                         or dt > TIMEOUT_CARGA_US:
