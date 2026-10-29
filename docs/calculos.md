@@ -81,22 +81,28 @@ La pantalla del LCD y el dashboard clasifican la meseta promedio:
 
 **Ojo con el modelo:** una fuga real (una resistencia R_f en paralelo con C) también acorta la constante de tiempo: τ = C·(R‖R_f), con P = 1023·R_f/(R+R_f). El firmware calcula C = τ/R, así que con fuga subestima C en el factor P/1023 (≈ 3 % si la meseta es 97 %). Ajustar P sí evita el error mucho mayor del método simple del 63 %, pero no corrige este factor. El simulador usa el mismo modelo que el firmware (τ = R·C y P < 1023).
 
-## 9. Límites de exactitud del firmware (medidos con el simulador)
+## 9. Exactitud del firmware (medida con el simulador)
 
-El simulador reproduce el bucle real del Uno: `micros()` con resolución de 4 µs, `analogRead()` de ~112 µs (la muestra se toma ~12 µs después de empezar), ruido gaussiano del ADC y truncamiento. Peor error en 3 repeticiones:
+El simulador reproduce el bucle real del Uno: `micros()` con resolución de 4 µs, `analogRead()` de ~112 µs (la muestra se toma ~12 µs después de empezar), ruido gaussiano del ADC y truncamiento. Peor error de la medición completa (autorango, 2 a 5 pruebas, promedio) en 3 repeticiones:
 
-| C | meseta 100 %, ruido 0.3 | meseta 100 %, ruido 0.7 | meseta 96 %, ruido 0.7 |
-|---|---|---|---|
-| 1 µF (1 MΩ) | −0.2 % | −0.7 % | −0.4 % |
-| 1.5 µF | +0.8 % | +0.9 % | **+5.0 %** |
-| 2.2 µF | +0.4 % | −0.2 % | **+2.1 %** |
-| 4.7 µF | +0.2 % | −0.5 % | +1.6 % |
-| 10–100 µF | < 0.4 % | < 0.9 % | < 0.8 % |
-| 220–1000 µF | < 0.7 % | **−1.6 %** | −1.3 % |
+| C | v2.2 · sin fuga, ruido 0.3 | v2.2 · sin fuga, ruido 0.7 | v2.2 · meseta 96 %, ruido 0.7 | **v2.3** · sin fuga, ruido 0.3 | **v2.3** · sin fuga, ruido 0.7 | **v2.3** · meseta 96 %, ruido 0.7 |
+|---|---|---|---|---|---|---|
+| 1 µF (1 MΩ) | −0.20 % | −0.70 % | −0.40 % | 0.00 % | −0.10 % | +0.80 % |
+| 1.5 µF | +0.80 % | +0.87 % | **+5.00 %** | +0.07 % | +0.07 % | +0.80 % |
+| 2.2 µF | +0.36 % | −0.18 % | **+2.05 %** | +0.05 % | −0.14 % | +0.50 % |
+| 4.7 µF | +0.23 % | −0.49 % | +1.62 % | +0.02 % | +0.04 % | +0.40 % |
+| 10–100 µF | < 0.4 % | < 0.9 % | < 0.8 % | < 0.1 % | < 0.1 % | < 0.7 % |
+| 220–1000 µF | < 0.7 % | **−1.59 %** | −1.30 % | < 0.1 % | < 0.3 % | < 0.6 % |
 
-Dos efectos:
+### Por qué fallaba la v2.2 (y la v2.1, que mide igual)
 
-1. **Capacitores chicos en 10 kΩ con fuga (1 a 5 µF).** t1 dura pocos ms, y detectar el cruce se atrasa hasta una vuelta del bucle (~116 µs). Eso cambia la razón t2/t1 y, cuando hay fuga, el ajuste de P amplifica el error. Interpolar el instante del cruce entre la lectura anterior y la actual lo baja a menos de 0.7 % (probado en el simulador).
-2. **Capacitores grandes con ruido (≥ 220 µF).** La curva sube tan lento que el ruido del ADC cruza los umbrales un poco antes. Promediar varias lecturas cerca de los umbrales lo reduciría.
+1. **Capacitores chicos en 10 kΩ con fuga (1 a 5 µF).** t1 dura pocos ms y el firmware anota el tiempo de la *primera lectura* que pasa el umbral: el cruce real ocurrió hasta una vuelta antes (~116 µs). Eso cambia la razón t2/t1 y, con fuga, el ajuste de P amplifica el error.
+2. **Capacitores grandes con ruido (≥ 220 µF).** La curva sube tan lento que pasa miles de lecturas cerca de 250 y de 700; basta una lectura con ruido hacia arriba para "cruzar" antes de tiempo.
 
-Ninguna de estas mejoras está en la v2.2, que mide exactamente igual que la v2.1. Quedan como propuesta para una v2.3. En la práctica, la tolerancia de un electrolítico típico es ±20 %, así que estos errores no cambian ninguna conclusión de la exposición.
+### Qué cambia la v2.3
+
+- Los cruces se detectan sobre la **media móvil de las últimas 8 lecturas**, con su tiempo medio. El ruido baja a la mitad y deja de adelantar el cruce. Por vuelta solo se suman y restan enteros (~5 µs); la comparación `suma ≥ N·cantidad` evita dividir.
+- El instante se **interpola** entre el punto medio de la vuelta anterior y el de la actual, y se le suman 8 µs: el ADC muestrea ~12 µs después de leer `micros()` y la carga empieza ~4 µs después de `t0`. La cuenta en `float` se hace solo una vez por cruce.
+- Lo que queda con fuga (+0.3 a +0.8 %) viene de promediar una curva que se dobla: la media queda un poco por debajo de la curva y el cruce sale un poco tarde.
+
+La tolerancia de un electrolítico típico es ±20 %, así que la diferencia no cambia ninguna conclusión de la exposición. Pero con la v2.3 el valor medido ya refleja el capacitor y no el método.

@@ -1,12 +1,14 @@
 # Protocolo serie Arduino → PC
 
-## Firmware v2.2 (115200 baud)
+## Firmware v2.2 y v2.3 (115200 baud)
+
+Las dos usan el mismo protocolo. Única diferencia: en la v2.3, `t1_us` y `t2_us` de `#PRUEBA` llevan un decimal (son interpolados, ver [calculos.md](calculos.md#9-exactitud-del-firmware-medida-con-el-simulador)); en la v2.2 son enteros.
 
 Cada línea de máquina empieza con `#`, un tipo y campos separados por coma. El firmware **también** imprime el texto legible de la v2.1 para el Monitor Serie. El dashboard ignora ese texto cuando ya vio líneas `#`.
 
 | Línea | Campos | Cuándo |
 |---|---|---|
-| `#VERSION,2.2` | versión | al arrancar y con el comando `V` |
+| `#VERSION,2.3` | versión | al arrancar y con el comando `V` |
 | `#CONFIG,V,R10k,R1M,R_pin,K,N1,N2` | calibración del firmware | igual que `#VERSION` |
 | `#LISTO` | | listo para medir (también después de un error) |
 | `#INICIO,n_max` | pruebas máximas (5) | al empezar una medición |

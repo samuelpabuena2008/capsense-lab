@@ -4,7 +4,7 @@ Medidor de capacitancia RC (1 µF a 1000 µF) con Arduino Uno, y un dashboard en
 
 Proyecto de Samuel y Joel (Ingeniería de Sistemas, Universidad del Norte) para la GeoExpo de Física.
 
-![Dashboard en modo demo: resultado de 98.96 µF y curva de carga con t1, t2, τ y la meseta](docs/img/dashboard.jpg)
+![Dashboard en modo demo: resultado de 100.45 µF y curva de carga con t1, t2, τ y la meseta](docs/img/dashboard.jpg)
 
 ## Qué muestra
 
@@ -49,7 +49,8 @@ Todo eso también se elige desde la barra superior del dashboard. Opciones: `pyt
 
 ### En el Arduino
 
-- **Firmware v2.2** ([firmware/capsense_lab_v2_2](firmware/capsense_lab_v2_2/capsense_lab_v2_2.ino)): manda la curva real, t₁ y t₂, y acepta el botón **Medir** del dashboard (envía `M` por serie). 115200 baud.
+- **Firmware v2.3** ([firmware/capsense_lab_v2_3](firmware/capsense_lab_v2_3/capsense_lab_v2_3.ino)), recomendado: igual que la v2.2, pero detecta t₁ y t₂ con una media móvil y los interpola. En el simulador baja el peor error de ~5 % a menos de 1 %.
+- **Firmware v2.2** ([firmware/capsense_lab_v2_2](firmware/capsense_lab_v2_2/capsense_lab_v2_2.ino)): manda la curva real, t₁ y t₂, y acepta el botón **Medir** del dashboard (envía `M` por serie). 115200 baud. Mide igual que la v2.1.
 - **Firmware v2.1**: también funciona (9600 baud). Se mide con el botón START; el dashboard reconstruye t₁ y t₂ desde τ y P y dibuja la curva ajustada.
 
 Las constantes del montaje (V de entrada, resistencias, R del pin) están en [config/capsense.toml](config/capsense.toml) y deben coincidir con las del firmware. Si no coinciden, el dashboard muestra un aviso.
@@ -62,7 +63,7 @@ src/capsense/
 ├── io/          parser del protocolo y fuentes: serial, simulador, replay
 ├── services/    sesión (estado, hilo seguro) y logs/exportación
 └── ui/          Dash: layout, callbacks, gráficas, fórmulas, estilo
-firmware/        capsense_lab_v2_1 y capsense_lab_v2_2
+firmware/        capsense_lab_v2_1, v2_2 y v2_3
 tests/           unit/, integration/, fixtures/
 docs/            arquitectura, protocolo serie, cálculos
 scripts/         grabar un log del Arduino, regenerar fixtures
@@ -95,4 +96,4 @@ ruff check src tests
 
 ## Exactitud
 
-El firmware tiene límites conocidos (latencia de `analogRead` con capacitores de 1 a 5 µF con fuga y ruido del ADC con capacitores grandes). Están medidos con el simulador en [docs/calculos.md](docs/calculos.md#9-límites-de-exactitud-del-firmware-medidos-con-el-simulador).
+Con el simulador, la v2.1/v2.2 llega a +5 % con capacitores de 1 a 5 µF con fuga y a −1.6 % con capacitores grandes y ruido. La v2.3 deja todo el rango bajo 1 %. El panel demo permite elegir qué firmware simular para comparar. Tabla completa en [docs/calculos.md](docs/calculos.md#9-exactitud-del-firmware-medida-con-el-simulador).

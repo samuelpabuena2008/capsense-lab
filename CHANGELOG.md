@@ -2,6 +2,17 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.2.0] - 2026-10-29
+
+### Firmware v2.3
+- t1 y t2 se detectan sobre la media móvil de las últimas 8 lecturas y se interpolan entre vueltas del bucle, con corrección del retardo de muestreo del ADC.
+- En el simulador, el peor error pasa de +5.0 % (1.5 µF con fuga) y −1.6 % (1000 µF con ruido) a menos de 1 % en todo el rango.
+- `#PRUEBA` envía t1 y t2 con un decimal. Compila para el Uno con 16 528 bytes de flash (51 %) y 1252 bytes de RAM global (61 %).
+
+### Dashboard
+- El simulador imita la v2.3 (por defecto) o la v2.2; se elige en el panel demo o con `[demo] firmware` en `config/capsense.toml`.
+- Barrido de tests para las dos versiones.
+
 ## [0.1.0] - 2026-10-29
 
 ### Dashboard
@@ -21,4 +32,4 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 - La medición, el LCD, los LEDs, los botones y el autorango son los de la v2.1.
 
 ### Conocido
-- Error de hasta ~5 % con capacitores de 1 a 5 µF con fuga, y de ~1.5 % con capacitores grandes y ruido. Ver `docs/calculos.md`.
+- Error de hasta ~5 % con capacitores de 1 a 5 µF con fuga, y de ~1.5 % con capacitores grandes y ruido (corregido en el firmware v2.3). Ver `docs/calculos.md`.
