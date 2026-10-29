@@ -28,9 +28,14 @@ from capsense.io.base import DataSource
 
 log = logging.getLogger(__name__)
 
-VERSION_SIM = "2.2"
+VERSION_SIM = "2.3"
+VERSIONES = ("2.2", "2.3")
 
-# Constantes del firmware v2.2
+# v2.3: detección de cruces con media móvil de VENTANA lecturas (tiempo centrado) + interpolación.
+VENTANA = 8
+OFFSET_MUESTREO_US = 8.0   # la muestra del ADC ocurre ~12 µs después de micros(); la carga empieza ~4 µs después de t0
+
+# Constantes del firmware v2.2 / v2.3
 T1_MIN_AUTO_US = 3000
 T1_MAX_US = 2_500_000
 TIMEOUT_CARGA_US = 25_000_000
@@ -46,7 +51,8 @@ R_DESCARGA = 560.0
 BAUD = 115200
 
 # Tiempos del bucle de medición del Uno
-PERIODO_US = 116.0
+PERIODO_US = 116.0          # v2.2: analogRead (~112 µs) + resto de la vuelta
+EXTRA_V23_US = 5.0          # v2.3: ventana móvil (sumas de enteros)
 RETARDO_MUESTREO_US = 12.0
 RETARDO_INICIO_US = 4.0
 
@@ -64,13 +70,14 @@ class ParamsSim:
     velocidad: float = 1.0       # solo afecta el ritmo de salida, no los números
     auto: bool = False           # repetir la medición sola
     seed: int | None = None
+    firmware: str = VERSION_SIM  # "2.2" (primera lectura >= umbral) o "2.3" (media móvil + interpolación)
 
 
 @dataclass
 class _Carga:
     res: int
-    t1: int = 0
-    t2: int = 0
+    t1: float = 0
+    t2: float = 0
     muestras: list[tuple[int, int]] | None = None
     t_fin_us: float = 0.0
     adc_fin: int = 0
@@ -93,13 +100,13 @@ class FirmwareSim:
     def lineas_config(self) -> list[str]:
         c = self.cal
         rs = ",".join(_f(r.r_ohm, 0) for r in c.rangos[:2])
-        return [f"#VERSION,{VERSION_SIM}",
+        return [f"#VERSION,{self.p.firmware}",
                 f"#CONFIG,{_f(c.v_entrada, 2)},{rs},{_f(c.r_pin, 1)},{_f(c.k_cal, 3)},"
                 f"{_f(c.adc_n1, 0)},{_f(c.adc_n2, 0)}"]
 
     def arranque(self) -> list[tuple[float, str]]:
         lineas = self.lineas_config() + [
-            f"=== CapSense Lab v{VERSION_SIM} ===",
+            f"=== CapSense Lab v{self.p.firmware} ===",
             "Rango: 1 uF a 1000 uF. Pulsa START o envia M para medir.",
             "#LISTO",
         ]
@@ -111,6 +118,7 @@ class FirmwareSim:
         t = RETARDO_INICIO_US + 1.0
         j, sigma = self.p.jitter_us, self.p.ruido_lsb
         rng = self.rng
+        periodo = PERIODO_US + (EXTRA_V23_US if self.p.firmware != "2.2" else 0.0)
         while True:
             dt = int(t // 4) * 4
             ts = t + RETARDO_MUESTREO_US - RETARDO_INICIO_US
@@ -120,43 +128,78 @@ class FirmwareSim:
             # El AVR trunca: código = floor(Vin·1024/Vref)
             adc = min(1023, max(0, int(math.floor(v * 1024.0 / 1023.0))))
             yield dt, adc
-            t += PERIODO_US + (rng.uniform(-j, j) if j > 0 else 0.0)
+            t += periodo + (rng.uniform(-j, j) if j > 0 else 0.0)
 
     def _cargar(self, rango: int, extender: bool) -> _Carga:
+        """Una carga, con la misma lógica (y los mismos tipos enteros) que medirUnaVez() del firmware."""
         c = self.cal
         tau_us = max(c.r_total(rango) * max(self.p.c_uf, 0.0), 1e-3)   # Ω·µF = µs
         P = c.adc_max * self.p.meseta_pct / 100.0
-        n1, n2 = c.adc_n1, c.adc_n2
-        t1 = t2 = 0
+        n1, n2 = int(c.adc_n1), int(c.adc_n2)
+        v23 = self.p.firmware != "2.2"
+        t1 = t2 = 0.0
+        hay_t1 = False
         muestras: list[tuple[int, int]] = []
         t_obj = int(T_MUESTRA0_US)
         extendiendo = False
+        # v2.3: ventana circular y sumas enteras (uint32_t / uint16_t en el Arduino)
+        v_t = [0] * VENTANA
+        v_a = [0] * VENTANA
+        v_idx = v_cnt = suma_t = suma_a = 0
+        prev: tuple[int, int, int] | None = None     # (suma_t, suma_a, cnt) de la vuelta anterior
+
+        def cruce(n: int) -> float:
+            tm = suma_t / v_cnt + OFFSET_MUESTREO_US
+            am = suma_a / v_cnt
+            if prev is None:
+                return tm
+            tp = prev[0] / prev[2] + OFFSET_MUESTREO_US
+            ap = prev[1] / prev[2]
+            if am <= ap:
+                return tm
+            return tp + (n - ap) / (am - ap) * (tm - tp)
+
         for dt, adc in self._bucle(tau_us, P):
             if len(muestras) < N_MUESTRAS and dt >= t_obj:
                 muestras.append((dt, adc))
                 t_obj = int(t_obj * RAZON_MUESTRA)   # unsigned long en el Arduino
+            if v23:
+                if v_cnt == VENTANA:
+                    suma_t -= v_t[v_idx]
+                    suma_a -= v_a[v_idx]
+                else:
+                    v_cnt += 1
+                v_t[v_idx], v_a[v_idx] = dt, adc
+                suma_t += dt
+                suma_a += adc
+                v_idx = (v_idx + 1) % VENTANA
             if extendiendo:
                 if adc >= ADC_EXT_FIN or dt - t2 > EXT_MAX_US or len(muestras) >= N_MUESTRAS \
                         or dt > TIMEOUT_CARGA_US:
                     return _Carga(RES_OK, t1, t2, muestras, dt, adc, ext=True)
                 continue
-            if t1 == 0 and adc >= n1:
-                t1 = dt
+            sobre1 = suma_a >= n1 * v_cnt if v23 else adc >= n1
+            sobre2 = suma_a >= n2 * v_cnt if v23 else adc >= n2
+            if not hay_t1 and sobre1:
+                hay_t1 = True
+                t1 = cruce(n1) if v23 else dt
                 if t1 < T1_MIN_AUTO_US:
                     return _Carga(RES_RAPIDO, t_fin_us=dt, adc_fin=adc)
                 if rango > 0 and t1 > T1_MAX_US:
                     return _Carga(RES_LENTO, t_fin_us=dt, adc_fin=adc)
-            if adc >= n2:
-                t2 = dt
+            if sobre2:
+                t2 = cruce(n2) if v23 else dt
                 if extender:
                     extendiendo = True
                     continue
                 break
             if dt > TIMEOUT_CARGA_US:
-                return _Carga(RES_LENTO if t1 == 0 else RES_NO_LLEGA, t_fin_us=dt, adc_fin=adc)
+                return _Carga(RES_LENTO if not hay_t1 else RES_NO_LLEGA, t_fin_us=dt, adc_fin=adc)
+            if v23:
+                prev = (suma_t, suma_a, v_cnt)
         if t2 <= t1:
-            return _Carga(RES_RAPIDO, t_fin_us=t2, adc_fin=adc)
-        return _Carga(RES_OK, t1, t2, muestras, t2, adc)
+            return _Carga(RES_RAPIDO, t_fin_us=dt, adc_fin=adc)
+        return _Carga(RES_OK, t1, t2, muestras, dt, adc)
 
     def _t_descarga_s(self) -> float:
         adc = self._adc_actual
@@ -215,7 +258,11 @@ class FirmwareSim:
                 return out + self._error(5, "Sin capacitor", espera)
             for t, a in carga.muestras or []:
                 emitir(f"#MUESTRA,{t},{a}")
-            emitir(f"#PRUEBA,{i + 1},{rango},{carga.t1},{carga.t2},{_f(aj.P, 1)},{_f(tau_s * 1000, 3)},"
+            if self.p.firmware == "2.2":
+                ts = f"{int(carga.t1)},{int(carga.t2)}"          # unsigned long
+            else:
+                ts = f"{_f(carga.t1, 1)},{_f(carga.t2, 1)}"      # float interpolado
+            emitir(f"#PRUEBA,{i + 1},{rango},{ts},{_f(aj.P, 1)},{_f(tau_s * 1000, 3)},"
                    f"{_f(cuf, 3)},{1 if carga.ext else 0}")
             emitir(f"{i + 1},{c.rangos[rango].etiqueta},{_f(aj.P, 1)},{_f(tau_s * 1000, 3)},{_f(cuf, 3)}")
             cs.append(cuf)
@@ -305,6 +352,7 @@ class SimulatorSource(DataSource):
         self._estado(True, "Simulador")
         if not self._reproducir(sim.arranque()):
             return
+        anunciada = sim.p.firmware
         while not self._parar.is_set():
             try:
                 cmd = self._comandos.get(timeout=0.2)
@@ -312,6 +360,9 @@ class SimulatorSource(DataSource):
                 continue
             p = self.params
             sim.p = p
+            if p.firmware != anunciada:      # se cambió el firmware simulado: anunciarlo como al arrancar
+                anunciada = p.firmware
+                self._reproducir([(0.0, linea) for linea in sim.lineas_config()])
             if cmd == "V":
                 self._reproducir([(0.0, linea) for linea in sim.lineas_config()] + [(0.0, "#LISTO")])
             elif cmd == "M":

@@ -35,6 +35,7 @@ def test_override_parcial(tmp_path):
     ("[medicion]\nadc_n1 = 800", "adc_n1"),
     ("[[rangos]]\netiqueta='a'\nr_ohm=2000\n[[rangos]]\netiqueta='b'\nr_ohm=1000", "menor a mayor"),
     ("esto no es toml = = =", "sintaxis"),
+    ("[demo]\nfirmware = '3.0'", "firmware"),
 ])
 def test_errores_claros(tmp_path, toml, mensaje):
     p = tmp_path / "c.toml"

@@ -82,12 +82,12 @@ html, body { margin: 0; background: var(--fondo); color: var(--texto); font-fami
 /* dropdowns (dcc.Dropdown) */
 .dd { min-width: 150px; font-size: 1rem; }
 .dd-puerto { min-width: 260px; } .dd-archivo { min-width: 340px; } .dd-baud { min-width: 170px; }
-.dd-vel { min-width: 100px; } .dd-medicion { min-width: 220px; } .dd-prueba { min-width: 230px; }
+.dd-vel { min-width: 100px; } .dd-fw { min-width: 230px; } .dd-medicion { min-width: 220px; } .dd-prueba { min-width: 230px; }
 
 /* panel demo */
 .panel-demo { margin: 0 0 12px; padding: 10px 18px 16px; background: var(--panel); border: 1px dashed #33465e; border-radius: var(--radio); }
 .panel-demo summary { cursor: pointer; color: var(--acento); font-weight: 600; padding: 4px 0; }
-.demo-grid { display: grid; grid-template-columns: 2fr 1.6fr 1fr auto auto; gap: 18px 28px; align-items: end; margin-top: 10px; }
+.demo-grid { display: grid; grid-template-columns: 2fr 1.6fr 1fr auto auto auto; gap: 18px 28px; align-items: end; margin-top: 10px; }
 .check-auto { font-size: 1rem; padding-bottom: 8px; }
 .check-auto input { accent-color: var(--acento); transform: scale(1.2); }
 

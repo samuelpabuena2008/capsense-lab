@@ -25,7 +25,7 @@ def test_demo_de_punta_a_punta(tmp_path, cal):
     s = Session(cal, st)
     s.usar_fuente(SimulatorSource(ParamsSim(c_uf=47.0, velocidad=1000, seed=5), cal), "demo")
     assert esperar(lambda: s.snapshot().estado == DeviceState.LISTO)
-    assert s.snapshot().firmware == "2.2"
+    assert s.snapshot().firmware == "2.3"
     assert s.medir() == (True, "")
     assert esperar(lambda: bool(s.mediciones) and s.mediciones[-1].completa)
     m = s.snapshot().ultima
@@ -101,17 +101,18 @@ def tope_error(c_uf: float, meseta: float, ruido: float) -> float:
 
 
 @pytest.mark.lento
+@pytest.mark.parametrize("firmware", ["2.2", "2.3"])
 @pytest.mark.parametrize("c_uf", [1.0, 1.5, 2.2, 4.7, 10.0, 22.0, 47.0, 100.0, 220.0, 470.0, 1000.0])
 @pytest.mark.parametrize("meseta", [100.0, 96.0])
-def test_barrido_1_a_1000_uF(cal, c_uf, meseta):
-    """Barrido con el simulador (ruido y latencia del Uno): el resultado queda dentro de los límites
-    conocidos del firmware."""
+def test_barrido_1_a_1000_uF(cal, c_uf, meseta, firmware):
+    """Barrido con el simulador (ruido y latencia del Uno). La v2.2 queda dentro de sus límites conocidos;
+    la v2.3 (media móvil + cruce interpolado) bajo 1 % en todo el rango."""
     errores = {}
     for ruido in (0.3, 0.7):
-        tope = tope_error(c_uf, meseta, ruido)
+        tope = tope_error(c_uf, meseta, ruido) if firmware == "2.2" else 1.0
         s = Session(cal)
-        for _e, linea in FirmwareSim(ParamsSim(c_uf=c_uf, meseta_pct=meseta, ruido_lsb=ruido, seed=11),
-                                     cal).medir():
+        for _e, linea in FirmwareSim(ParamsSim(c_uf=c_uf, meseta_pct=meseta, ruido_lsb=ruido, seed=11,
+                                               firmware=firmware), cal).medir():
             s.recibir_linea(linea)
         rep = s.snapshot().ultima.reportado
         assert rep is not None, f"{c_uf} µF no dio resultado"

@@ -42,6 +42,7 @@ class DemoCfg:
     meseta_pct: float = 97.0
     ruido_lsb: float = 0.7
     velocidad: float = 1.0
+    firmware: str = "2.3"
 
 
 @dataclass
@@ -65,6 +66,13 @@ def _num(sec: dict[str, Any], clave: str, defecto: float, minimo: float | None =
     if maximo is not None and valor > maximo:
         raise ConfigError(f"'{clave}' = {valor} es mayor que {maximo}")
     return valor
+
+
+def _firmware_demo(valor: object) -> str:
+    v = str(valor)
+    if v not in ("2.2", "2.3"):
+        raise ConfigError(f"[demo] firmware debe ser \"2.2\" o \"2.3\" (llegó {valor!r})")
+    return v
 
 
 def desde_dict(datos: dict[str, Any], base: Path = RAIZ_PROYECTO) -> AppConfig:
@@ -112,6 +120,7 @@ def desde_dict(datos: dict[str, Any], base: Path = RAIZ_PROYECTO) -> AppConfig:
             meseta_pct=_num(demo, "meseta_pct", 97.0, 50.0, 100.0),
             ruido_lsb=_num(demo, "ruido_lsb", 0.7, 0.0, 20.0),
             velocidad=_num(demo, "velocidad", 1.0, 0.1, 100.0),
+            firmware=_firmware_demo(demo.get("firmware", "2.3")),
         ),
         carpeta_logs=carpeta,
     )

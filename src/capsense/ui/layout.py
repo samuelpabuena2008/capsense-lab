@@ -67,6 +67,10 @@ def _panel_demo(cfg: AppConfig) -> html.Details:
             _control("Velocidad", dcc.Dropdown(
                 id="demo-vel", value=d.velocidad, clearable=False, searchable=False, className="dd dd-vel",
                 options=[{"label": f"×{v:g}", "value": v} for v in (1, 2, 5, 20)])),
+            _control("Firmware simulado", dcc.Dropdown(
+                id="demo-fw", value=d.firmware, clearable=False, searchable=False, className="dd dd-fw",
+                options=[{"label": "v2.3 (cruce interpolado)", "value": "2.3"},
+                         {"label": "v2.2 (primera lectura)", "value": "2.2"}])),
             dcc.Checklist(id="demo-auto", options=[{"label": " Repetir sola cada 3 s", "value": "auto"}],
                           value=[], className="check-auto"),
         ], className="demo-grid"),

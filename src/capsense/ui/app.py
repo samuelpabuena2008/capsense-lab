@@ -29,7 +29,8 @@ class Controlador:
 
     def conectar_demo(self, **params: object) -> None:
         d = self.cfg.demo
-        base = ParamsSim(c_uf=d.c_uf, meseta_pct=d.meseta_pct, ruido_lsb=d.ruido_lsb, velocidad=d.velocidad)
+        base = ParamsSim(c_uf=d.c_uf, meseta_pct=d.meseta_pct, ruido_lsb=d.ruido_lsb, velocidad=d.velocidad,
+                         firmware=d.firmware)
         self.sim = SimulatorSource(base, self.session.cal)
         if params:
             self.sim.set_params(**params)

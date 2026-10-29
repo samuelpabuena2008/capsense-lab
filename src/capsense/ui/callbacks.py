@@ -260,15 +260,15 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
         State("modo", "value"), State("puerto", "value"), State("baud", "value"),
         State("replay-archivo", "value"), State("replay-vel", "value"),
         State("demo-c", "value"), State("demo-meseta", "value"), State("demo-ruido", "value"),
-        State("demo-vel", "value"), State("demo-auto", "value"),
+        State("demo-vel", "value"), State("demo-auto", "value"), State("demo-fw", "value"),
         prevent_initial_call=True,
     )
-    def acciones(_c, _d, _m, _l, modo, puerto, baud, archivo, vel_replay, c_log, meseta, ruido, vel, auto):
+    def acciones(_c, _d, _m, _l, modo, puerto, baud, archivo, vel_replay, c_log, meseta, ruido, vel, auto, fw):
         boton = dash.ctx.triggered_id
         if boton == "btn-conectar":
             if modo == "demo":
                 ctl.conectar_demo(c_uf=10 ** c_log, meseta_pct=meseta, ruido_lsb=ruido, velocidad=vel,
-                                  auto=bool(auto))
+                                  auto=bool(auto), firmware=fw)
                 return ""
             if modo == "arduino":
                 ctl.conectar_serial(puerto, int(baud))
@@ -291,12 +291,13 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
     @app.callback(
         Output("demo-c-txt", "children"), Output("demo-meseta-txt", "children"),
         Input("demo-c", "value"), Input("demo-meseta", "value"), Input("demo-ruido", "value"),
-        Input("demo-vel", "value"), Input("demo-auto", "value"),
+        Input("demo-vel", "value"), Input("demo-auto", "value"), Input("demo-fw", "value"),
     )
-    def parametros_demo(c_log, meseta, ruido, vel, auto):
+    def parametros_demo(c_log, meseta, ruido, vel, auto, fw):
         c = 10 ** c_log
         if ctl.sim is not None:
-            ctl.sim.set_params(c_uf=c, meseta_pct=meseta, ruido_lsb=ruido, velocidad=vel, auto=bool(auto))
+            ctl.sim.set_params(c_uf=c, meseta_pct=meseta, ruido_lsb=ruido, velocidad=vel, auto=bool(auto),
+                               firmware=fw)
         num, u = ph.formato_c(c)
         fuga = ph.nivel_fuga(meseta)
         tau_10k = cal.r_total(0) * c / 1e6

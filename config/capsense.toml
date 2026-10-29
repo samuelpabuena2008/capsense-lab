@@ -31,6 +31,7 @@ c_uf = 100.0          # capacitor simulado
 meseta_pct = 97.0     # meseta en % de 1023 (menos = más fuga)
 ruido_lsb = 0.7       # desviación del ruido del ADC, en cuentas
 velocidad = 1.0       # 1 = tiempo real; 5 = cinco veces más rápido
+firmware = "2.3"     # firmware que imita el simulador: "2.3" o "2.2"
 
 [logs]
 carpeta = "logs"
