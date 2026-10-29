@@ -10,40 +10,45 @@ import plotly.graph_objects as go
 from capsense.domain import physics as ph
 from capsense.domain.models import Calibracion
 
-# Paleta sobria, consistente con style.css
+# Paleta del sistema de diseño (ver assets/style.css)
 FONDO = "rgba(0,0,0,0)"
-PANEL = "#141a23"
-REJILLA = "#253041"
-TEXTO = "#e6edf3"
-TENUE = "#8b98a8"
-ACENTO = "#4cc9f0"
-AJUSTE = "#f4a261"
-VERDE = "#3fb950"
-ROJO = "#f85149"
-COLORES_PRUEBA = ["#4cc9f0", "#f4a261", "#a78bfa", "#3fb950", "#f472b6"]
-FUENTE = "Segoe UI, Inter, Roboto, Helvetica, Arial, sans-serif"
+PANEL = "#0d1117"
+REJILLA = "#1c2531"
+TEXTO = "#e8eef5"
+TENUE = "#8592a3"
+ACENTO = "#3b9eff"
+AJUSTE = "#f59e0b"
+VERDE = "#22c55e"
+ROJO = "#ef4444"
+DORADO = "#facc15"
+COLORES_PRUEBA = ["#3b9eff", "#f59e0b", "#a78bfa", "#22c55e", "#f472b6"]
+FUENTE = "Segoe UI Variable Text, Segoe UI, Inter, Roboto, Helvetica, Arial, sans-serif"
+MONO = "Cascadia Code, Cascadia Mono, Fira Code, Consolas, monospace"
 
 
-def _base(fig: go.Figure, alto: int = 520) -> go.Figure:
+def _base(fig: go.Figure, alto: int | None = None) -> go.Figure:
     fig.update_layout(
         height=alto,
+        autosize=True,
         paper_bgcolor=FONDO,
         plot_bgcolor=PANEL,
-        font=dict(family=FUENTE, size=16, color=TEXTO),
-        margin=dict(l=70, r=70, t=40, b=60),
-        hoverlabel=dict(font=dict(family=FUENTE, size=15), bgcolor="#0b0f14", bordercolor=ACENTO),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, bgcolor="rgba(0,0,0,0)",
-                    font=dict(size=14)),
+        font=dict(family=FUENTE, size=14, color=TEXTO),
+        margin=dict(l=64, r=64, t=36, b=50),
+        hoverlabel=dict(font=dict(family=MONO, size=13), bgcolor="#0d1117", bordercolor=ACENTO),
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, x=0, bgcolor="rgba(0,0,0,0)",
+                    font=dict(size=12, color="#a3b0bf")),
     )
-    fig.update_xaxes(gridcolor=REJILLA, zerolinecolor=REJILLA, linecolor=REJILLA, ticks="outside")
-    fig.update_yaxes(gridcolor=REJILLA, zerolinecolor=REJILLA, linecolor=REJILLA, ticks="outside")
+    fig.update_xaxes(gridcolor=REJILLA, zerolinecolor=REJILLA, linecolor="#2d3a4a", ticks="outside",
+                     tickcolor="#2d3a4a", tickfont=dict(family=MONO, size=12, color="#a3b0bf"))
+    fig.update_yaxes(gridcolor=REJILLA, zerolinecolor=REJILLA, linecolor="#2d3a4a", ticks="outside",
+                     tickcolor="#2d3a4a", tickfont=dict(family=MONO, size=12, color="#a3b0bf"))
     return fig
 
 
-def vacia(mensaje: str, alto: int = 520) -> go.Figure:
+def vacia(mensaje: str, alto: int | None = None) -> go.Figure:
     fig = _base(go.Figure(), alto)
     fig.add_annotation(text=mensaje, showarrow=False, x=0.5, y=0.5, xref="paper", yref="paper",
-                       font=dict(size=20, color=TENUE))
+                       font=dict(size=17, color=TENUE))
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
     return fig
@@ -126,14 +131,14 @@ def curva_carga(calculados: Sequence[ph.RunCalculado], seleccion: str, cal: Cali
         v_tau = aj.P * ph.FRACCION_TAU
         fig.add_trace(go.Scatter(
             x=[aj.tau / k], y=[v_tau * v], mode="markers", name="τ (63.2 % de P)",
-            marker=dict(symbol="star", size=20, color="#ffd166", line=dict(width=1, color="#0b0f14")),
+            marker=dict(symbol="star", size=20, color=DORADO, line=dict(width=1, color="#0b0f14")),
             customdata=[round(v_tau, 1)],
             hovertemplate=f"τ = %{{x:.3f}} {unidad}<br>V = %{{y:.3f}} V<br>ADC = %{{customdata}}"
                           "<extra>τ</extra>",
         ))
         for n_tau in (1, 2, 3, 5):
             pct = (1 - math.exp(-n_tau)) * 100
-            fig.add_vline(x=n_tau * aj.tau / k, line=dict(color="#5b6b80", width=1.5, dash="dot"),
+            fig.add_vline(x=n_tau * aj.tau / k, line=dict(color="#3a4a5e", width=1.5, dash="dot"),
                           annotation=dict(text=f"{n_tau if n_tau > 1 else ''}τ · {pct:.1f} %",
                                           font=dict(size=13, color=TENUE), yanchor="bottom"),
                           annotation_position="bottom right")
@@ -161,27 +166,28 @@ def pruebas(calculados: Sequence[ph.RunCalculado], cal: Calibracion) -> go.Figur
     """C de cada prueba con la media y la banda de incertidumbre (semi-rango)."""
     res = ph.resumir(calculados, cal)
     if res is None:
-        return vacia("Sin pruebas", alto=360)
+        return vacia("Sin pruebas")
     escala, unidad = (1000.0, "mF") if res.c_uf >= 1000 else (1.0, "µF")
     xs = [rc.run.i for rc in calculados]
     cs = [rc.c_uf / escala for rc in calculados]
     media, delta = res.c_uf / escala, res.delta_uf / escala
 
-    fig = _base(go.Figure(), alto=360)
+    fig = _base(go.Figure())
     fig.add_hrect(y0=media - delta, y1=media + delta, fillcolor=ACENTO, opacity=0.12, line_width=0)
     fig.add_hline(y=media, line=dict(color=ACENTO, width=2, dash="dash"),
-                  annotation=dict(text=f"media {media:.4g} {unidad} ± {delta:.2g}", font=dict(size=14)),
-                  annotation_position="top left")
+                  annotation=dict(text=f"media {media:.4g} {unidad} ± {delta:.2g}",
+                                  font=dict(size=12, family=MONO, color="#a3b0bf")),
+                  annotation_position="bottom right")
     fig.add_trace(go.Scatter(
         x=xs, y=cs, mode="markers+text", name="C por prueba",
         marker=dict(size=18, color=[COLORES_PRUEBA[i % 5] for i in range(len(xs))],
                     line=dict(width=2, color="#0b0f14")),
-        text=[f"{c:.4g}" for c in cs], textposition="top center", textfont=dict(size=14),
+        text=[f"{c:.4g}" for c in cs], textposition="top center", textfont=dict(size=12, family=MONO),
         hovertemplate=f"Prueba %{{x}}<br>C = %{{y:.4f}} {unidad}<extra></extra>",
     ))
     pad = max(delta * 2.5, media * 0.004)
     fig.update_layout(
-        showlegend=False, margin=dict(l=70, r=20, t=20, b=50),
+        showlegend=False, margin=dict(l=64, r=20, t=14, b=44),
         xaxis=dict(title=dict(text="Prueba"), tickmode="array", tickvals=xs, range=[0.5, max(xs) + 0.5]),
         yaxis=dict(title=dict(text=f"C ({unidad})"), range=[media - pad * 1.6, media + pad * 1.6]),
     )
