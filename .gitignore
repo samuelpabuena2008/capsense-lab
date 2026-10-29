@@ -1,8 +1,28 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Entornos
 .venv/
 venv/
-logs/
-config.json
-build/
+env/
+
+# Editores
+.idea/
+.vscode/
+.claude/
+
+# Sesiones y logs (se conserva la carpeta)
+logs/*
+!logs/.gitkeep
+*.csv
+!tests/fixtures/*.csv
+
+# Firmware compilado
+firmware/**/build/

@@ -1,0 +1,36 @@
+# Configuración del CapSense Lab.
+# Debe coincidir con las constantes del firmware (capsense_lab_v2_x.ino).
+
+[medicion]
+v_entrada = 4.92      # V: voltaje real del pin 5V (medido con multímetro)
+r_pin = 25.0          # ohm: resistencia interna aproximada del pin de carga
+k_cal = 1.0           # C_final = C_medida * k_cal (1.0 = sin corrección)
+adc_n1 = 250          # primer nivel del ajuste de curva
+adc_n2 = 700          # segundo nivel del ajuste de curva
+adc_max = 1023
+
+# Resistencias de carga, de menor a mayor (medidas con multímetro).
+[[rangos]]
+etiqueta = "10k"
+r_ohm = 9790.0
+
+[[rangos]]
+etiqueta = "1M"
+r_ohm = 996000.0
+
+[serial]
+puerto = ""           # vacío = autodetectar (COMx en Windows, /dev/ttyACM* o /dev/ttyUSB* en Linux, /dev/cu.* en macOS)
+baud = 115200         # firmware v2.2. La v2.1 usa 9600.
+
+[ui]
+host = "127.0.0.1"
+puerto_http = 8050
+
+[demo]
+c_uf = 100.0          # capacitor simulado
+meseta_pct = 97.0     # meseta en % de 1023 (menos = más fuga)
+ruido_lsb = 0.7       # desviación del ruido del ADC, en cuentas
+velocidad = 1.0       # 1 = tiempo real; 5 = cinco veces más rápido
+
+[logs]
+carpeta = "logs"
