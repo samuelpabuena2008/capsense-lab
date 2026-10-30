@@ -387,7 +387,7 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
 
     @app.callback(
         Output("graf-curva", "figure"), Output("pasos", "children"), Output("pasos-sub", "children"),
-        Output("nota-curva", "children"), Output("formula-curva", "children"),
+        Output("nota-curva", "children"), Output("formula-curva", "children"), Output("titulo-curva", "children"),
         Input("ver", "data"), Input("sel-medicion", "value"), Input("sel-prueba", "value"), Input("tema", "data"),
         Input("magnitud-curva", "value"),
     )
@@ -395,12 +395,13 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
         p = paleta(tema)
         magnitud = magnitud or "v"
         formula = "Q(t) = C · V(t) = C·P·(1 − e^(−t/τ))" if magnitud == "q" else "V(t) = P · (1 − e^(−t/τ))"
+        titulo = "Carga del capacitor · Q(t)" if magnitud == "q" else "Voltaje del capacitor · V(t)"
         v = session.snapshot()
         m, _ = _elegir_medicion(v.mediciones, sel)
         if m is None or not m.runs:
             return (figures.vacia("Sin datos todavía · pulsa Medir", p),
                     html.Div("Aquí aparecen las fórmulas con los números de la medición, paso a paso.",
-                             className="vacio-msg"), "Mide. Ajusta. Explica.", "", formula)
+                             className="vacio-msg"), "Mide. Ajusta. Explica.", "", formula, titulo)
         calc = _calcular(m, cal)
         if not calc:
             raise PreventUpdate
@@ -427,7 +428,7 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
                     f"{len(elegida.run.samples)} muestras")
         if magnitud == "q":
             nota += f" · Q = C·V con C = {elegida.c_uf:.4g} µF"
-        return fig, bloques, sub, nota, formula
+        return fig, bloques, sub, nota, formula, titulo
 
     @app.callback(
         Output("grupo-arduino", "style"), Output("grupo-replay", "style"), Output("panel-demo", "style"),

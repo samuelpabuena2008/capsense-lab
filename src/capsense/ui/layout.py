@@ -101,7 +101,7 @@ def _vista_medicion() -> html.Section:
     return html.Section([
         html.Div(id="kpis", className="kpis"),
         html.Div([
-            html.Div([html.Div([html.H2("Curva de carga"), html.Div(id="nota-curva", className="card-nota")]),
+            html.Div([html.Div([html.H2("Voltaje del capacitor · V(t)", id="titulo-curva"), html.Div(id="nota-curva", className="card-nota")]),
                       html.Div([
                           html.Span("V(t) = P · (1 − e^(−t/τ))", id="formula-curva", className="formula-chip"),
                           dcc.RadioItems(id="magnitud-curva", value="v", inline=True, className="segmentado chico",
