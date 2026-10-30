@@ -40,6 +40,9 @@ ICONOS = {
     "escudo": '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
     "tema": '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="black"/>',
     "barras": '<path d="M5 20V10M12 20V4M19 20v-7"/>',
+    "flecha-izq": '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+    "flecha-der": '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    "circuito": '<path d="M3 7h5l2-3 3 6 2-3h6"/><path d="M3 17h7M14 17h7M10 13v8M14 13v8"/>',
 }
 
 PLANTILLA = ("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' "

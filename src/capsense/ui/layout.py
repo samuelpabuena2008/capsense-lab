@@ -13,12 +13,14 @@ from dash import dcc, html
 
 from capsense import __version__
 from capsense.config import AppConfig
+from capsense.ui.simulation.layout import vista as vista_simulacion
 
 VISTAS = [
     ("medicion", "Medición", "ico-actividad"),
     ("calculos", "Cálculos", "ico-sigma"),
     ("historial", "Historial", "ico-tabla"),
     ("conexion", "Conexión", "ico-enchufe"),
+    ("simulacion", "Simulación", "ico-circuito"),
 ]
 
 
@@ -247,6 +249,7 @@ def crear_layout(cfg: AppConfig, modo_inicial: str) -> html.Div:
                 _vista_calculos(),
                 _vista_historial(),
                 _vista_conexion(cfg, modo_inicial),
+                vista_simulacion(cfg),
             ], className="contenido"),
         ], className="principal"),
         html.Div(id="aviso", className="toasts", **{"aria-live": "assertive"}),

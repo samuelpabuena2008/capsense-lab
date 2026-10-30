@@ -1,0 +1,129 @@
+/* CapSense Lab · vista Simulación (esquema y protoboard animados). Usa los tokens de style.css. */
+.tema-ambar { --bb-board: #1d1d1d; --bb-chan: #121212; --bb-hole: #4a4a4a; --bb-btn: #2c2c2c; --bb-surface: #161616;
+              --bb-ink: #f2efea; --bb-muted: #a39d95; --bb-accent: #ff8a3d; --bb-on-accent: #1a0a00; }
+.tema-neon  { --bb-board: #16234a; --bb-chan: #0c1430; --bb-hole: #3c5285; --bb-btn: #22356a; --bb-surface: #0f1938;
+              --bb-ink: #eaf0ff; --bb-muted: #a9b6d6; --bb-accent: #2de2c4; --bb-on-accent: #021a16; }
+.app { --e-high: #ef4444; --e-low: #3b82f6; --e-hiz: #6b7280; --e-adc: #16a34a; }
+
+.vista-simulacion { display: flex; flex-direction: column; gap: var(--gap); overflow: hidden; }
+.sim-barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sim-seg { display: inline-flex; gap: 3px; padding: 3px; background: var(--s1); border: 1px solid var(--borde); border-radius: 11px; }
+.sim-seg button { height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--texto-2);
+                  font: inherit; font-size: 0.9rem; font-weight: 650; }
+.sim-seg button.activo { background: var(--acento); color: var(--acento-texto); }
+.sim-controles { display: flex; gap: 8px; }
+.sim-btn { height: 46px; padding: 0 20px; font-size: 1.02rem; border-radius: 12px; }
+.sim-btn .ico { width: 18px; height: 18px; }
+
+.sim-grid { flex: 1; min-height: 0; display: grid; gap: var(--gap);
+            grid-template-columns: minmax(0, 1.75fr) minmax(360px, 1fr); }
+.sim-col { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
+.sim-card-circuito { min-height: 0; display: flex; flex-direction: column; }
+.sim-card-panel { flex: 1.25 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sim-card-graf { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px 8px; }
+.sim-titulo-wrap { display: flex; align-items: baseline; gap: 12px; }
+.sim-titulo-wrap h2 { font-size: 1.35rem; }
+.sim-paso-num { color: var(--acento); font-weight: 750; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em;
+                white-space: nowrap; }
+.sim-puntos { display: flex; gap: 6px; flex-wrap: wrap; }
+.punto-paso { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--borde-fuerte); background: transparent; padding: 0; }
+.punto-paso.hecho { background: var(--acento-suave); border-color: var(--acento-borde); }
+.punto-paso.actual { background: var(--acento); border-color: var(--acento); box-shadow: var(--brillo); }
+.sim-lienzo { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.sim-lienzo svg { width: 100%; height: 100%; max-height: 100%; }
+.sim-leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--texto-2); font-size: 0.8rem; margin-top: 6px; align-items: center; }
+.sim-leyenda i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.sim-leyenda .e-high { background: var(--e-high); } .sim-leyenda .e-low { background: var(--e-low); }
+.sim-leyenda .e-hiz { background: var(--e-hiz); } .sim-leyenda .e-adc { background: var(--e-adc); }
+.sim-leyenda .e-flujo { background: radial-gradient(circle, #ffd166 40%, transparent 45%); }
+.sim-tiempo { margin-left: auto; color: var(--texto); font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* panel lateral */
+.sim-panel-scroll { overflow: auto; flex: 1; padding-right: 4px; }
+.sim-card-panel h3 { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--acento); margin: 14px 0 6px; }
+.sim-card-panel h3:first-child { margin-top: 0; }
+.sim-que-pasa { font-size: 1.3rem; line-height: 1.5; font-weight: 500; margin: 0; color: var(--texto); }
+.sim-codigo { font-family: var(--mono); font-size: 0.9rem; margin: 0; padding: 10px 0; background: rgba(0, 0, 0, 0.35);
+              border: 1px solid var(--borde); border-radius: 10px; overflow-x: auto; white-space: pre; }
+.sim-codigo .linea { display: block; padding: 1px 12px; color: var(--texto-3); }
+.sim-codigo .linea.activa { color: var(--texto); background: var(--acento-suave); box-shadow: inset 3px 0 0 var(--acento); }
+.sim-pines table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.sim-pines th { text-align: left; color: var(--texto-3); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; padding: 4px 6px; }
+.sim-pines td { padding: 5px 6px; border-top: 1px solid var(--borde); }
+.sim-pines td.pin { font-family: var(--mono); font-weight: 700; }
+.sim-pines small { color: var(--texto-3); }
+.estado-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 750; color: #fff; }
+.estado-chip.e-high { background: var(--e-high); } .estado-chip.e-low { background: var(--e-low); }
+.estado-chip.e-hiz { background: var(--e-hiz); } .estado-chip.e-adc { background: var(--e-adc); }
+.sim-proto { color: var(--texto-2); margin: 0; font-size: 0.92rem; }
+.sim-formulas .paso { margin-top: 10px; box-shadow: none; }
+.sim-formulas .paso-md { font-size: 0.9rem; }
+
+/* parámetros */
+.sim-card-params summary { display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer; flex-wrap: wrap; }
+.sim-card-params summary .ico { color: var(--acento); }
+.sim-resumen { color: var(--texto-2); font-weight: 500; font-size: 0.82rem; }
+.sim-params { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.sim-input { width: 110px; height: 36px; background: var(--s3); color: var(--texto); border: 1px solid var(--borde-fuerte);
+             border-radius: 8px; padding: 0 10px; font: inherit; }
+
+/* ---- SVG: comunes a esquema y protoboard ---- */
+.sim-svg { font-family: var(--sans); color: var(--texto); }
+.sim-svg .sim-el { transition: opacity 250ms; }
+.sim-svg .sim-el.apagado { opacity: 0.22; }
+.sim-svg .sim-el.activo { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--acento) 55%, transparent)); }
+.sim-svg .flujo { fill: none; stroke: #ffd166; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 0.1 16;
+                  opacity: 0; pointer-events: none; }
+.sim-svg .flujo:not(.activo) { opacity: 0 !important; }
+.sim-svg .led .led-halo { fill: transparent; }
+.sim-svg .led.encendido .led-halo { fill: currentColor; opacity: 0.4; filter: blur(4px); }
+.sim-svg .led.verde { color: #3fb950; } .sim-svg .led.amarillo { color: #f2c230; } .sim-svg .led.rojo { color: #ef4444; }
+.sim-svg .led .led-cuerpo { fill: color-mix(in srgb, currentColor 22%, #111); }
+.sim-svg .led.encendido .led-cuerpo { fill: currentColor; }
+.sim-svg .lcd-texto { font-family: var(--mono); font-size: 12.5px; fill: #b6f5a0; white-space: pre; }
+.sim-svg .valor { font-size: 16px; font-weight: 700; fill: var(--texto); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.sim-svg .volt-adc { font-size: 15px; fill: var(--texto-2); text-anchor: middle; font-variant-numeric: tabular-nums; }
+
+/* esquema */
+.esquema .arduino { fill: var(--s1); stroke: var(--borde-fuerte); stroke-width: 1.5; }
+.esquema .ard-titulo { font-size: 19px; font-weight: 750; fill: var(--texto); text-anchor: middle; }
+.esquema .cable { stroke: var(--texto-2); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.esquema .cable.lectura { stroke-dasharray: 6 5; }
+.esquema .resistor { stroke: var(--acento-2); stroke-width: 3.2; fill: none; stroke-linejoin: round; }
+.esquema .placa { stroke: var(--texto); stroke-width: 5; stroke-linecap: round; }
+.esquema .polaridad { font-size: 24px; font-weight: 800; fill: var(--critico); }
+.esquema .et { font-size: 16px; fill: var(--texto-2); text-anchor: middle; }
+.esquema .nodo { fill: var(--acento); }
+.esquema .tierra { stroke: var(--texto-2); stroke-width: 3; fill: none; stroke-linecap: round; }
+.esquema .tanque { fill: var(--s1); stroke: var(--borde-fuerte); stroke-width: 1.5; }
+.esquema .tanque-nivel { fill: var(--acento); opacity: 0.85; }
+.esquema .voltimetro { fill: var(--s1); stroke: var(--e-adc); stroke-width: 2; }
+.esquema .volt-v { font-size: 26px; font-weight: 800; fill: var(--texto); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.esquema .pin-nombre { font-family: var(--mono); font-size: 19px; font-weight: 700; fill: var(--texto); dominant-baseline: central; }
+.esquema .pin-punto { fill: var(--texto-2); }
+.esquema .chip rect { fill: var(--e-hiz); }
+.esquema .chip text { font-size: 13px; font-weight: 800; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+.esquema .chip.estado-high rect { fill: var(--e-high); } .esquema .chip.estado-low rect { fill: var(--e-low); }
+.esquema .chip.estado-adc rect { fill: var(--e-adc); }
+.esquema .lcd-marco { fill: #1f3d22; stroke: #2c4a2f; } .esquema .lcd-pantalla { fill: #0d1f10; }
+.esquema .leds-et { font-size: 12px; }
+
+/* protoboard */
+.protoboard .bb-placa { fill: var(--bb-board); stroke: var(--borde); stroke-width: 0.5; }
+.protoboard .pastilla.estado-high rect { fill: var(--e-high); stroke: var(--e-high); }
+.protoboard .pastilla.estado-low rect { fill: var(--e-low); stroke: var(--e-low); }
+.protoboard .pastilla.estado-adc rect { fill: var(--e-adc); stroke: var(--e-adc); }
+.protoboard .pastilla.estado-high text, .protoboard .pastilla.estado-low text,
+.protoboard .pastilla.estado-adc text { fill: #fff; }
+.protoboard .bb-relleno { fill: var(--acento); opacity: 0.8; }
+.protoboard .bb-lectura-caja { fill: var(--bb-surface); stroke: var(--e-adc); stroke-width: 1.5; }
+.protoboard .lcd-texto { font-size: 15px; }
+
+@media (max-width: 1250px) {
+  .sim-grid { grid-template-columns: 1fr; overflow: auto; }
+  .sim-card-circuito, .sim-card-graf, .sim-card-panel { flex: none; min-height: 340px; }
+  .sim-col { min-height: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim-svg .flujo.activo { opacity: 0.6 !important; }
+}

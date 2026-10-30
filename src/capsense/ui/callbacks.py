@@ -19,6 +19,7 @@ from capsense.io.serial_source import listar_puertos
 from capsense.services import storage
 from capsense.ui import figures, formulas
 from capsense.ui.layout import VISTAS, icono
+from capsense.ui.simulation import callbacks as simulacion_callbacks
 from capsense.ui.temas import Paleta, paleta
 
 if TYPE_CHECKING:
@@ -279,6 +280,7 @@ def _historial(mediciones: list[Measurement], cal: Calibracion) -> html.Table | 
 def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloque por callback
     session = ctl.session
     cal = session.cal
+    simulacion_callbacks.registrar(app, ctl)
     ids_nav = [f"nav-{clave}" for clave, _n, _i in VISTAS]
     ids_vista = [f"vista-{clave}" for clave, _n, _i in VISTAS]
 

@@ -1,6 +1,6 @@
-// Atajos de teclado de la aplicación: M = medir, 1-4 = vistas, F11 = pantalla completa.
+// Atajos de teclado de la aplicación: M = medir, 1-5 = vistas, F11 = pantalla completa.
 (function () {
-  const VISTAS = ["nav-medicion", "nav-calculos", "nav-historial", "nav-conexion"];
+  const VISTAS = ["nav-medicion", "nav-calculos", "nav-historial", "nav-conexion", "nav-simulacion"];
 
   function escribiendo(e) {
     const t = e.target;
@@ -29,7 +29,7 @@
       if (b && !b.disabled) b.click();
       return;
     }
-    const i = "1234".indexOf(e.key);
+    const i = "12345".indexOf(e.key);
     if (i >= 0) {
       const b = document.getElementById(VISTAS[i]);
       if (b) b.click();
