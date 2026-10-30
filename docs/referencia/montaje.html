@@ -1,0 +1,444 @@
+<title>Montaje CapSense Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: guía de armado por etapas; la placa dibujada a escala de filas, tablas hoyo por hoyo debajo */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --board:#DDE3E8; --chan:#C9D2D9; --hole:#8793A0; --btn:#F4F6F8;
+  --line:#BAC4CD; --ink:#15212B; --muted:#586775; --accent:#0B6E8A; --on-accent:#FFFFFF;
+  --font:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151B; --surface:#161F27; --board:#27343F; --chan:#1A252E; --hole:#5D6E7D; --btn:#3A4B59;
+    --line:#35444F; --ink:#E6EDF2; --muted:#9BAAB6; --accent:#5CC3E0; --on-accent:#0E151B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151B; --surface:#161F27; --board:#27343F; --chan:#1A252E; --hole:#5D6E7D; --btn:#3A4B59;
+  --line:#35444F; --ink:#E6EDF2; --muted:#9BAAB6; --accent:#5CC3E0; --on-accent:#0E151B; color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;max-width:62ch}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab,.nav button{font:inherit;font-size:14px;padding:7px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;cursor:pointer}
+.tab.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.scroll{overflow-x:auto}
+svg{display:block;min-width:640px;width:100%;height:auto}
+.nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.nav .grow{flex:1;min-width:200px}
+#resumen{font-weight:500;margin:0}
+#nota{color:var(--muted);margin:2px 0 0;max-width:70ch}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 12px}
+summary{cursor:pointer;padding:10px 0;font-weight:500}
+table{border-collapse:collapse;width:100%;min-width:480px;margin-bottom:10px;font-size:14px}
+th{text-align:left;font-weight:500;color:var(--muted);border-bottom:1px solid var(--line);padding:6px 8px 6px 0}
+td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+code{font-family:var(--mono);font-size:13px;background:var(--bg);padding:1px 5px;border-radius:4px}
+ul.mats{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 24px}
+ul.mats li{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line)}
+ul.mats b{font-family:var(--mono);font-weight:500}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:8px 0 0}
+.key i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+h2{font-size:17px;font-weight:600;margin:8px 0 0}
+</style>
+<main>
+  <header>
+    <h1>Montaje CapSense Lab</h1>
+    <p class="sub">Medidor de capacitancia RC con Arduino Uno, pantalla LCD 16×2, 3 botones y 3 LEDs. Los números 1 a 30 están como en tu placa (el 1 a la derecha). Las letras a–e y f–j son los hoyos de cada fila.</p>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+
+  <section class="card">
+    <div class="scroll">
+      <svg id="bb" viewBox="0 0 680 480" role="img" aria-label="Protoboard con el montaje completo del medidor de capacitancia, por etapas"><g id="g"></g></svg>
+    </div>
+    <div class="key">
+      <span><i style="background:var(--accent)"></i>aro azul = hoyos de la etapa actual</span>
+      <span><i style="background:#E24B4A"></i>(+) y riel rojo</span>
+      <span><i style="background:#378ADD"></i>(−) y riel azul</span>
+      <span>cuadros numerados = pines de la LCD</span>
+      <span>↑ = cable largo al riel de arriba (cualquier hoyo)</span>
+    </div>
+    <div class="nav">
+      <button type="button" id="prev">Etapa anterior</button>
+      <button type="button" id="next">Etapa siguiente</button>
+      <div class="grow">
+        <p id="resumen"></p>
+        <p id="nota"></p>
+      </div>
+    </div>
+  </section>
+
+  <h2>Hoyo por hoyo</h2>
+  <div id="tablas" style="display:flex;flex-direction:column;gap:8px"></div>
+
+  <h2>Materiales</h2>
+  <section class="card"><ul class="mats" id="mats"></ul></section>
+</main>
+<script>
+const C = {
+  red: '#E24B4A', blue: '#378ADD', green: '#639922', amber: '#EF9F27',
+  purple: '#7F77DD', gnd: 'var(--ink)', yellow: '#F2C230', ledgreen: '#3FAF5B'
+};
+
+const STEPS = [
+  {
+    id: 1,
+    titulo: 'Medición',
+    resumen: 'Resistencias, capacitor y 4 cables, ahora más juntos, en las filas 12 a 18.',
+    nota: 'Cada resistencia ocupa 3 espacios (patas dobladas cerca del cuerpo). Se corrió 1 fila a la izquierda: la 560 Ω ahora va de c12 a c15 y la 10 kΩ de d15 a d18. La pata larga del capacitor (+) va en e15 y la de la franja (−) en e16. Si lo pones al revés se calienta y se daña.',
+    dib: [
+      { k: 'res', a: [12, 'c'], b: [15, 'c'], lab: '560 Ω', bands: ['#2E9E4F', '#2F6FD0', '#7A4A1E'], lp: 15, small: true },
+      { k: 'res', a: [15, 'd'], b: [18, 'd'], lab: '10 kΩ', bands: ['#7A4A1E', '#222222', '#E8832A'], lp: -15, small: true },
+      { k: 'cap', pos: [15, 'e'], neg: [16, 'e'] },
+      { k: 'pin', at: [12, 'a'], pin: 'D3', dir: 'up', lvl: 0, color: C.green },
+      { k: 'pin', at: [15, 'a'], pin: 'A0', dir: 'up', lvl: 0, color: C.amber },
+      { k: 'pin', at: [16, 'a'], pin: 'GND', dir: 'up', lvl: 1, color: C.gnd },
+      { k: 'pin', at: [18, 'a'], pin: 'D2', dir: 'up', lvl: 1, color: C.purple }
+    ],
+    tabla: [
+      ['Resistencia 560 Ω (verde-azul-café)', 'c12', 'c15'],
+      ['Resistencia 10 kΩ (café-negro-naranja)', 'd15', 'd18'],
+      ['Capacitor a medir', '(+) e15', '(−) e16'],
+      ['Cable D3 (descarga)', 'Arduino D3', 'a12'],
+      ['Cable A0 (lectura)', 'Arduino A0', 'a15'],
+      ['Cable D2 (carga)', 'Arduino D2', 'a18'],
+      ['Cable GND (tierra 1)', 'Arduino GND', 'a16']
+    ]
+  },
+  {
+    id: 2,
+    titulo: 'Alimentación',
+    resumen: '2 cables del Arduino a los rieles de arriba.',
+    nota: 'Los rieles de abajo no se usan: la pantalla LCD queda encima y los tapa. El Arduino Uno tiene 3 pines GND; aquí usas dos (el de a16 y el del riel). Los puentes de tierra de los LEDs y los botones también usan el riel azul, en los hoyos libres.',
+    dib: [
+      { k: 'rail', col: 30, rail: 'tr', pin: '5V', dir: 'up', lvl: 0, color: C.red },
+      { k: 'rail', col: 28, rail: 'tb', pin: 'GND', dir: 'up', lvl: 1, color: C.gnd }
+    ],
+    tabla: [
+      ['Cable 5V', 'Arduino 5V', 'riel rojo de arriba (cualquier hoyo)'],
+      ['Cable GND (tierra 2)', 'Arduino GND', 'riel azul de arriba (cualquier hoyo)']
+    ]
+  },
+  {
+    id: 3,
+    titulo: 'LEDs',
+    resumen: '3 LEDs parejos, uno cada 4 filas: verde (27–30), amarillo (23–26) y rojo (19–22).',
+    nota: 'Los tres bloques son iguales. De izquierda a derecha en el dibujo: cable del Arduino en la fila de más a la izquierda, resistencia de 220 Ω al lado, LED con su pata larga (+) en la fila de la derecha y la pata corta (−) una fila antes, y un puente corto de tierra hacia arriba, al riel azul.',
+    dib: [
+      { k: 'res', a: [27, 'c'], b: [30, 'c'], lab: '220 Ω', bands: ['#B03030', '#B03030', '#7A4A1E'], lp: 0, small: true },
+      { k: 'led', an: [30, 'e'], ca: [29, 'e'], color: C.ledgreen },
+      { k: 'jr', at: [29, 'a'], rail: 'tb' },
+      { k: 'pin', at: [27, 'a'], pin: 'D4', dir: 'up', lvl: 0, color: C.ledgreen },
+      { k: 'res', a: [23, 'c'], b: [26, 'c'], lab: '220 Ω', bands: ['#B03030', '#B03030', '#7A4A1E'], lp: 0, small: true },
+      { k: 'led', an: [26, 'e'], ca: [25, 'e'], color: C.yellow },
+      { k: 'jr', at: [25, 'a'], rail: 'tb' },
+      { k: 'pin', at: [23, 'a'], pin: 'D5', dir: 'up', lvl: 0, color: C.yellow },
+      { k: 'res', a: [19, 'c'], b: [22, 'c'], lab: '220 Ω', bands: ['#B03030', '#B03030', '#7A4A1E'], lp: 0, small: true },
+      { k: 'led', an: [22, 'e'], ca: [21, 'e'], color: C.red },
+      { k: 'jr', at: [21, 'a'], rail: 'tb' },
+      { k: 'pin', at: [19, 'a'], pin: 'D6', dir: 'up', lvl: 0, color: C.red }
+    ],
+    tabla: [
+      ['LED verde (listo)', '(+) e30', '(−) e29'],
+      ['Resistencia 220 Ω (rojo-rojo-café)', 'c27', 'c30'],
+      ['Puente de tierra', 'a29', 'riel azul de arriba'],
+      ['Cable D4', 'Arduino D4', 'a27'],
+      ['LED amarillo (midiendo)', '(+) e26', '(−) e25'],
+      ['Resistencia 220 Ω', 'c23', 'c26'],
+      ['Puente de tierra', 'a25', 'riel azul de arriba'],
+      ['Cable D5', 'Arduino D5', 'a23'],
+      ['LED rojo (error)', '(+) e22', '(−) e21'],
+      ['Resistencia 220 Ω', 'c19', 'c22'],
+      ['Puente de tierra', 'a21', 'riel azul de arriba'],
+      ['Cable D6', 'Arduino D6', 'a19']
+    ]
+  },
+  {
+    id: 4,
+    titulo: 'Botones',
+    resumen: '3 pulsadores parejos, uno cada 4 filas: SIGUIENTE (1–3), START (5–7) y ATRÁS (9–11).',
+    nota: 'En el dibujo, de izquierda a derecha: ATRÁS, START, SIGUIENTE. Cada botón cruza el canal con sus 4 patas. El cable del Arduino va en la fila de la izquierda, arriba, y la pata en diagonal (abajo a la derecha) va a tierra por un cable que sube al riel azul (flecha ↑, cualquier hoyo libre).',
+    dib: [
+      { k: 'btn', r: 9, lab: 'ATRÁS' },
+      { k: 'pin', at: [9, 'a'], pin: 'A1', dir: 'up', lvl: 0, color: C.blue },
+      { k: 'flag', at: [11, 'g'], label: 'GND\u2191', lvl: 0, color: C.gnd },
+      { k: 'btn', r: 5, lab: 'START' },
+      { k: 'pin', at: [5, 'a'], pin: 'A2', dir: 'up', lvl: 0, color: C.blue },
+      { k: 'flag', at: [7, 'g'], label: 'GND\u2191', lvl: 0, color: C.gnd },
+      { k: 'btn', r: 1, lab: 'SIG.' },
+      { k: 'pin', at: [1, 'a'], pin: 'A3', dir: 'up', lvl: 0, color: C.blue },
+      { k: 'flag', at: [3, 'g'], label: 'GND\u2191', lvl: 0, color: C.gnd }
+    ],
+    tabla: [
+      ['Botón ATRÁS', 'e9, f9, e11, f11', 'cruza el canal'],
+      ['Cable A1', 'Arduino A1', 'a9'],
+      ['Puente de tierra', 'g11', 'riel azul de arriba'],
+      ['Botón START', 'e5, f5, e7, f7', 'cruza el canal'],
+      ['Cable A2', 'Arduino A2', 'a5'],
+      ['Puente de tierra', 'g7', 'riel azul de arriba'],
+      ['Botón SIGUIENTE', 'e1, f1, e3, f3', 'cruza el canal'],
+      ['Cable A3', 'Arduino A3', 'a1'],
+      ['Puente de tierra', 'g3', 'riel azul de arriba']
+    ]
+  },
+  {
+    id: 5,
+    titulo: 'LCD y contraste',
+    resumen: 'La pantalla con sus 16 pines en la fila j, de j30 (pin 1) a j15 (pin 16).',
+    nota: 'El potenciómetro se movió a las filas 21–23, justo debajo de los pines 7 a 10 de la LCD, que no se usan. Los cables D10, D9, D8 y D7 alternan de altura en el dibujo para que se lean bien. La LCD se conecta por la fila j y el módulo queda colgando hacia abajo, fuera de la placa, así no tapa los hoyos f, g y h. Los cables se enchufan en esos hoyos. Pin 1 a la izquierda como se lee la pantalla. Las flechas ↑ son cables largos al riel de arriba.',
+    dib: [
+      { k: 'lcd' },
+      { k: 'res', a: [16, 'f'], b: [13, 'f'], lab: '220 Ω', bands: ['#B03030', '#B03030', '#7A4A1E'], lp: 0, small: true },
+      { k: 'flag', at: [13, 'g'], label: '5V\u2191', lvl: 1, color: C.red },
+      { k: 'flag', at: [30, 'g'], label: 'GND\u2191', lvl: 0, color: C.gnd },
+      { k: 'flag', at: [29, 'g'], label: '5V\u2191', lvl: 1, color: C.red },
+      { k: 'flag', at: [27, 'g'], label: 'D12', lvl: 0, color: C.purple },
+      { k: 'flag', at: [26, 'g'], label: 'GND\u2191', lvl: 1, color: C.gnd },
+      { k: 'flag', at: [25, 'g'], label: 'D11', lvl: 0, color: C.purple },
+      { k: 'flag', at: [20, 'g'], label: 'D10', lvl: 1, color: C.purple },
+      { k: 'flag', at: [19, 'g'], label: 'D9', lvl: 0, color: C.purple },
+      { k: 'flag', at: [18, 'g'], label: 'D8', lvl: 1, color: C.purple },
+      { k: 'flag', at: [17, 'g'], label: 'D7', lvl: 0, color: C.purple },
+      { k: 'flag', at: [15, 'g'], label: 'GND\u2191', lvl: 0, color: C.gnd },
+      { k: 'pot', rows: [21, 22, 23], l: 'i' },
+      { k: 'flag', at: [21, 'g'], label: 'GND\u2191', lvl: 0, color: C.gnd },
+      { k: 'flag', at: [23, 'g'], label: '5V\u2191', lvl: 0, color: C.red },
+      { k: 'lane', a: [22, 'g'], b: [28, 'g'], y: 272 }
+    ],
+    tabla: [
+      ['Potenciómetro 10 kΩ', 'i21, i22, i23', 'pata central en i22'],
+      ['Puente GND del potenciómetro', 'g21', 'riel azul de arriba'],
+      ['Puente 5V del potenciómetro', 'g23', 'riel rojo de arriba'],
+      ['Puente de contraste (V0)', 'g22', 'g28 (pin 3 de la LCD)'],
+      ['LCD pin 1 (VSS)', 'j30', 'puente de g30 al riel azul de arriba'],
+      ['LCD pin 2 (VDD)', 'j29', 'puente de g29 al riel rojo de arriba'],
+      ['LCD pin 3 (V0)', 'j28', 'viene del potenciómetro (g28)'],
+      ['LCD pin 4 (RS)', 'j27', 'Arduino D12 en g27'],
+      ['LCD pin 5 (RW)', 'j26', 'puente de g26 al riel azul de arriba'],
+      ['LCD pin 6 (E)', 'j25', 'Arduino D11 en g25'],
+      ['LCD pines 7 a 10 (DB0 a DB3)', 'j24 a j21', 'sin conectar'],
+      ['LCD pin 11 (DB4)', 'j20', 'Arduino D10 en g20'],
+      ['LCD pin 12 (DB5)', 'j19', 'Arduino D9 en g19'],
+      ['LCD pin 13 (DB6)', 'j18', 'Arduino D8 en g18'],
+      ['LCD pin 14 (DB7)', 'j17', 'Arduino D7 en g17'],
+      ['LCD pin 15 (A, luz)', 'j16', 'resistencia 220 Ω de f16 a f13, y de g13 un puente al riel rojo de arriba'],
+      ['LCD pin 16 (K, luz)', 'j15', 'puente de g15 al riel azul de arriba']
+    ]
+  },
+  {
+    id: 6,
+    titulo: 'Autorango (opcional)',
+    resumen: 'Una resistencia extra de 1 MΩ para medir bien los capacitores de 1 a 3 µF.',
+    nota: 'Solo si activas USAR_AUTORANGO en el código. Un puente corto lleva el nodo del capacitor (b15) a la fila 17, la resistencia de 1 MΩ va de b17 a b20 y el cable A5 entra en a20. Sin esto el medidor funciona igual, pero con menos precisión por debajo de unos 3 µF.',
+    dib: [
+      { k: 'jj', a: [15, 'b'], b: [17, 'a'], lane: 141 },
+      { k: 'res', a: [17, 'b'], b: [20, 'b'], lab: '', bands: ['#7A4A1E', '#222222', '#2E9E4F'], lp: 0, small: true },
+      { k: 'pin', at: [20, 'a'], pin: 'A5', dir: 'up', lvl: 1, color: C.blue }
+    ],
+    tabla: [
+      ['Puente corto', 'b15', 'a17'],
+      ['Resistencia 1 MΩ (café-negro-verde)', 'b17', 'b20'],
+      ['Cable A5', 'Arduino A5', 'a20']
+    ]
+  }
+];
+
+const MATERIALES = [
+  ['Arduino Uno R3 y cable USB', '1'],
+  ['Protoboard de 30 filas con rieles arriba y abajo', '1'],
+  ['LCD 16×2 con 16 pines sueltos', '1'],
+  ['Potenciómetro de ~10 kΩ', '1'],
+  ['Pulsadores de 4 patas', '3'],
+  ['LED amarillo, rojo y verde', '3'],
+  ['Resistencia 220 Ω (rojo-rojo-café)', '4'],
+  ['Resistencia 560 Ω (verde-azul-café)', '1'],
+  ['Resistencia 10 kΩ (café-negro-naranja)', '1'],
+  ['Resistencia 1 MΩ (café-negro-verde), solo autorango', '1'],
+  ['Capacitor electrolítico a medir', '1'],
+  ['Cables macho-macho (jumpers)', '~35']
+];
+const X = r => 50 + (30 - r) * 20;
+const YL = { tr: 84, tb: 100, a: 130, b: 150, c: 170, d: 190, e: 210, f: 262, g: 282, h: 302, i: 322, j: 342, br: 372, bb: 388 };
+const P = h => [X(h[0]), YL[h[1]]];
+const PILL_Y = { up: [44, 18], down: [428, 456] };
+const FLAG_Y = [300, 324];
+let cur = 0;
+
+const el = id => document.getElementById(id);
+const txt = (x, y, t, o = {}) =>
+  `<text x="${x}" y="${y}" text-anchor="${o.a || 'middle'}" dominant-baseline="central" font-size="${o.s || 11}" fill="${o.c || 'var(--muted)'}"${o.h ? ' stroke="var(--chan)" stroke-width="4" style="paint-order:stroke"' : ''}>${t}</text>`;
+const line = (x1, y1, x2, y2, c, w = 3) =>
+  `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+const dot = (x, y, c, r = 4.5) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/>`;
+const leg = (x, y, s) =>
+  `<circle cx="${x}" cy="${y}" r="6.5" fill="${s === '+' ? '#E24B4A' : '#378ADD'}"/>` +
+  `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="500" fill="#fff">${s === '+' ? '+' : '−'}</text>`;
+
+function pill(x, py, label, color) {
+  const w = label.length * 7 + 16;
+  const cx = Math.min(Math.max(x, w / 2 + 4), 676 - w / 2);
+  return `<rect x="${cx - w / 2}" y="${py - 10}" width="${w}" height="20" rx="10" fill="var(--surface)" stroke="${color}" stroke-width="1.5"/>` +
+    `<text x="${cx}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="12" fill="var(--ink)">${label}</text>`;
+}
+
+function stubTo(x, y0, dir, lvl, label, color, o) {
+  const py = PILL_Y[dir][lvl];
+  const y1 = dir === 'up' ? py + 10 : py - 10;
+  o.wires.push(line(x, y0, x, y1, color) + dot(x, y0, color));
+  o.pills.push(pill(x, py, label, color));
+}
+
+function holesOf(it) {
+  switch (it.k) {
+    case 'res': return [it.a, it.b];
+    case 'cap': return [it.pos, it.neg];
+    case 'pin': return [it.at];
+    case 'led': return [it.an, it.ca];
+    case 'jr': return [it.at];
+    case 'jj': return [it.a, it.b];
+    case 'resr': return [it.a];
+    case 'btn': return [[it.r, 'e'], [it.r, 'f'], [it.r + 2, 'e'], [it.r + 2, 'f']];
+    case 'pot': return it.rows.map(r => [r, it.l]);
+    case 'lcd': return Array.from({ length: 16 }, (_, i) => [15 + i, 'j']);
+    case 'flag': return [it.at];
+    case 'lane': return [it.a, it.b];
+    default: return [];
+  }
+}
+
+function draw(it, o) {
+  if (it.k === 'res') {
+    const [xa, y] = P(it.a), [xb] = P(it.b);
+    const x1 = Math.min(xa, xb), x2 = Math.max(xa, xb);
+    const bl = it.small ? 34 : 50, m = (x1 + x2) / 2, bx = m - bl / 2;
+    const bw = it.small ? 4 : 5, gap = it.small ? 8 : 10, off = it.small ? 7 : 12;
+    o.parts.push(line(x1, y, x2, y, 'var(--muted)', 2.5) + dot(x1, y, 'var(--muted)', 4) + dot(x2, y, 'var(--muted)', 4) +
+      `<rect x="${bx}" y="${y - 6}" width="${bl}" height="12" rx="5" fill="#D9B88F" stroke="#9C7A4D" stroke-width="0.5"/>` +
+      it.bands.map((c, i) => `<rect x="${bx + off + i * gap}" y="${y - 6}" width="${bw}" height="12" fill="${c}"/>`).join('') +
+      (it.lp ? txt(m, y + it.lp, it.lab, { s: 12, c: 'var(--ink)', h: true }) : ''));
+  } else if (it.k === 'cap') {
+    const [xa, y] = P(it.pos), [xb] = P(it.neg);
+    o.parts.push(`<circle cx="${(xa + xb) / 2}" cy="${y}" r="17" fill="#2C3E5C" stroke="#1B2740" stroke-width="0.5"/>` +
+      `<path d="M${(xa + xb) / 2} ${y - 17}A17 17 0 0 0 ${(xa + xb) / 2} ${y + 17}Z" fill="#8FA3C4"/>` + leg(xa, y, '+') + leg(xb, y, '-'));
+  } else if (it.k === 'led') {
+    const [xa, y] = P(it.an), [xb] = P(it.ca);
+    o.parts.push(`<circle cx="${(xa + xb) / 2}" cy="${y}" r="12" fill="${it.color}" stroke="var(--ink)" stroke-width="0.8"/>` + leg(xa, y, '+') + leg(xb, y, '-'));
+  } else if (it.k === 'pin') {
+    const [x, y] = P(it.at);
+    stubTo(x, y, it.dir, it.lvl, it.pin, it.color, o);
+  } else if (it.k === 'rail') {
+    stubTo(X(it.col), YL[it.rail], it.dir, it.lvl, it.pin, it.color, o);
+  } else if (it.k === 'jr') {
+    const [x, y] = P(it.at), yr = YL[it.rail];
+    const c = it.rail === 'br' || it.rail === 'tr' ? '#E24B4A' : 'var(--ink)';
+    o.wires.push(line(x, y, x, yr, c) + dot(x, y, c) + dot(x, yr, c));
+  } else if (it.k === 'jj') {
+    const [xa, ya] = P(it.a), [xb, yb] = P(it.b);
+    o.wires.push(`<path d="M${xa} ${ya}V${it.lane}H${xb}V${yb}" fill="none" stroke="#7F77DD" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` + dot(xa, ya, '#7F77DD') + dot(xb, yb, '#7F77DD'));
+  } else if (it.k === 'resr') {
+    const [x, y] = P(it.a), yr = YL[it.rail];
+    o.parts.push(line(x, y, x, yr, 'var(--muted)', 2.5) + dot(x, y, 'var(--muted)', 4) + dot(x, yr, 'var(--muted)', 4) +
+      `<rect x="${x - 6}" y="${y + 6}" width="12" height="18" rx="5" fill="#D9B88F" stroke="#9C7A4D" stroke-width="0.5"/>` +
+      `<rect x="${x - 6}" y="${y + 9}" width="12" height="3" fill="#B03030"/><rect x="${x - 6}" y="${y + 14}" width="12" height="3" fill="#B03030"/><rect x="${x - 6}" y="${y + 19}" width="12" height="3" fill="#7A4A1E"/>`);
+  } else if (it.k === 'btn') {
+    const xa = X(it.r), xb = X(it.r + 2);
+    let s = '';
+    [[xa, YL.e], [xb, YL.e], [xa, YL.f], [xb, YL.f]].forEach(([x, y]) => {
+      s += line(x, y, x, y < 230 ? 241 : 259, 'var(--muted)', 2.5) + dot(x, y, 'var(--muted)', 4);
+    });
+    s += `<rect x="${Math.min(xa, xb) - 8}" y="241" width="${Math.abs(xb - xa) + 16}" height="18" rx="4" fill="var(--btn)" stroke="var(--ink)" stroke-width="0.8"/>`;
+    s += txt(X(it.r + 1), 250, it.lab, { s: 11, c: 'var(--ink)' });
+    o.parts.push(s);
+  } else if (it.k === 'pot') {
+    const x1 = Math.min(X(it.rows[0]), X(it.rows[2])), x2 = Math.max(X(it.rows[0]), X(it.rows[2])), y = YL[it.l];
+    let s = `<rect x="${x1 - 6}" y="${y - 12}" width="${x2 - x1 + 12}" height="24" rx="5" fill="var(--btn)" stroke="var(--ink)" stroke-width="0.8"/>`;
+    s += txt((x1 + x2) / 2, y, 'POT', { s: 11, c: 'var(--ink)' });
+    o.parts.push(s);
+  } else if (it.k === 'lcd') {
+    let s = '';
+    for (let i = 0; i < 16; i++) {
+      const x = X(30 - i), y = YL.j;
+      s += `<rect x="${x - 9}" y="${y - 9}" width="18" height="18" rx="3" fill="var(--accent)"/>` + txt(x, y, String(i + 1), { s: 11, c: 'var(--on-accent)' });
+    }
+    o.parts.push(s);
+    o.over.push(`<rect x="0" y="354" width="522" height="118" rx="8" fill="var(--accent)" fill-opacity="0.14" stroke="var(--accent)" stroke-dasharray="5 4"/>` + txt(260, 428, 'LCD 16\u00D72: el m\u00F3dulo queda encima de esta zona', { s: 12, c: 'var(--ink)' }));
+  } else if (it.k === 'flag') {
+    const [x, y] = P(it.at), py = FLAG_Y[it.lvl];
+    o.wires.push(line(x, y, x, py - 9, it.color, 2.5) + dot(x, y, it.color));
+    o.pills.push(pill(x, py, it.label, it.color));
+  } else if (it.k === 'lane') {
+    const [xa, ya] = P(it.a), [xb, yb] = P(it.b);
+    o.wires.push(`<path d="M${xa} ${ya}V${it.y}H${xb}V${yb}" fill="none" stroke="#7F77DD" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` + dot(xa, ya, '#7F77DD') + dot(xb, yb, '#7F77DD'));
+  }
+}
+
+function boardBase() {
+  let s = '';
+  s += `<rect x="28" y="72" width="624" height="36" rx="6" fill="var(--board)" stroke="var(--line)" stroke-width="0.5"/>`;
+  s += `<rect x="28" y="112" width="624" height="112" rx="6" fill="var(--board)" stroke="var(--line)" stroke-width="0.5"/>`;
+  s += `<rect x="28" y="224" width="624" height="26" fill="var(--chan)"/>`;
+  s += `<rect x="28" y="250" width="624" height="106" rx="6" fill="var(--board)" stroke="var(--line)" stroke-width="0.5"/>`;
+  s += `<rect x="28" y="360" width="624" height="40" rx="6" fill="var(--board)" stroke="var(--line)" stroke-width="0.5"/>`;
+  s += line(36, 77, 644, 77, '#E24B4A', 1.5) + line(36, 107, 644, 107, '#378ADD', 1.5);
+  s += line(36, 364, 644, 364, '#E24B4A', 1.5) + line(36, 396, 644, 396, '#378ADD', 1.5);
+  for (let r = 1; r <= 30; r++) {
+    ['tr', 'tb', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'br', 'bb'].forEach(l => {
+      s += `<circle cx="${X(r)}" cy="${YL[l]}" r="3.5" fill="var(--hole)"/>`;
+    });
+  }
+  'abcdefghij'.split('').forEach(l => { s += txt(36, YL[l], l, { s: 11 }); });
+  s += txt(38, YL.tr, '+', { s: 12 }) + txt(38, YL.tb, '−', { s: 12 });
+  s += txt(38, YL.br, '+', { s: 12 }) + txt(38, YL.bb, '−', { s: 12 });
+  return s;
+}
+
+function numeros() {
+  let s = '';
+  for (let r = 1; r <= 30; r++) s += txt(X(r), 237, String(r), { s: 11, h: true });
+  return s;
+}
+
+function render() {
+  const upto = cur < 0 ? STEPS.length : cur + 1;
+  const o = { parts: [], wires: [], pills: [], over: [] };
+  let rings = '';
+  for (let i = 0; i < upto; i++) {
+    STEPS[i].dib.forEach(it => {
+      draw(it, o);
+      if (i === cur) holesOf(it).forEach(h => {
+        const [x, y] = P(h);
+        rings += `<circle cx="${x}" cy="${y}" r="10" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+      });
+    });
+  }
+  el('g').innerHTML = boardBase() + o.parts.join('') + numeros() + o.wires.join('') + o.over.join('') + rings + o.pills.join('');
+  el('tabs').innerHTML = STEPS.map((s, i) =>
+    `<button type="button" class="tab${i === cur ? ' on' : ''}" data-i="${i}">${s.id}. ${s.titulo}</button>`).join('') +
+    `<button type="button" class="tab${cur < 0 ? ' on' : ''}" data-i="-1">Todo junto</button>`;
+  el('tabs').querySelectorAll('button').forEach(b => b.onclick = () => { cur = +b.dataset.i; render(); });
+  el('prev').disabled = cur === 0;
+  el('next').disabled = cur < 0 || cur === STEPS.length - 1;
+  const s = cur < 0 ? null : STEPS[cur];
+  el('resumen').textContent = s ? s.resumen : 'Todas las etapas juntas: así queda la placa completa (la 6 es opcional).';
+  el('nota').textContent = s ? s.nota : 'Recuerda los 2 cables GND del Arduino: uno a a16 y otro al riel azul de arriba. Los puentes de tierra de LEDs, botones, potenciómetro y LCD también van al riel azul de arriba, cada uno en un hoyo distinto.';
+  el('tablas').innerHTML = STEPS.map((st, i) =>
+    `<details${(cur < 0 || i === cur) ? ' open' : ''}><summary>${st.id}. ${st.titulo}</summary>` +
+    `<div class="scroll"><table><thead><tr><th>Pieza</th><th>Desde</th><th>Hasta</th></tr></thead><tbody>` +
+    st.tabla.map(r => `<tr><td>${r[0]}</td><td><code>${r[1]}</code></td><td>${r[2].replace(/^([a-j]\d+)$/, '<code>$1</code>')}</td></tr>`).join('') +
+    `</tbody></table></div></details>`).join('');
+}
+
+el('prev').onclick = () => { if (cur > 0) { cur--; render(); } };
+el('next').onclick = () => { if (cur >= 0 && cur < STEPS.length - 1) { cur++; render(); } };
+el('mats').innerHTML = MATERIALES.map(m => `<li><span>${m[0]}</span><b>${m[1]}</b></li>`).join('');
+render();
+</script>

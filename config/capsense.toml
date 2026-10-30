@@ -8,6 +8,7 @@ k_cal = 1.0           # C_final = C_medida * k_cal (1.0 = sin corrección)
 adc_n1 = 250          # primer nivel del ajuste de curva
 adc_n2 = 700          # segundo nivel del ajuste de curva
 adc_max = 1023
+r_descarga = 560.0    # ohm: resistencia de descarga entre D3 y el nodo del capacitor
 
 # Resistencias de carga, de menor a mayor (medidas con multímetro).
 [[rangos]]
@@ -17,6 +18,21 @@ r_ohm = 9790.0
 [[rangos]]
 etiqueta = "1M"
 r_ohm = 996000.0
+
+# Pines del Arduino en el montaje (docs/referencia/montaje.html). Deben coincidir con el firmware.
+[pines]
+carga = ["D2", "A5"]  # uno por rango: 10 kΩ y 1 MΩ
+descarga = "D3"
+lectura = "A0"
+led_verde = "D4"
+led_amarillo = "D5"
+led_rojo = "D6"
+boton_atras = "A1"
+boton_start = "A2"
+boton_siguiente = "A3"
+lcd_rs = "D12"
+lcd_e = "D11"
+lcd_datos = ["D10", "D9", "D8", "D7"]   # DB4 a DB7
 
 [serial]
 puerto = ""           # vacío = autodetectar (COMx en Windows, /dev/ttyACM* o /dev/ttyUSB* en Linux, /dev/cu.* en macOS)

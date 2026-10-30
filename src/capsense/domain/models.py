@@ -32,6 +32,8 @@ class Calibracion:
     adc_n2: float = 700.0
     adc_max: float = 1023.0
     rangos: tuple[Rango, ...] = (Rango("10k", 9790.0), Rango("1M", 996000.0))
+    r_descarga: float = 560.0      # ohm: resistencia de descarga (D3 -> nodo)
+    adc_cero: int = 5              # el firmware considera descargado el capacitor con ADC <= 5
 
     def r_total(self, rango: int) -> float:
         """R de carga + R del pin, en ohm (la que usa el firmware para C)."""
@@ -47,6 +49,28 @@ class Calibracion:
             if r.etiqueta == etiqueta:
                 return i
         return None
+
+
+@dataclass(frozen=True)
+class Pines:
+    """Pines del Arduino en el montaje (iguales a los del firmware). Única fuente de estos nombres."""
+
+    carga: tuple[str, ...] = ("D2", "A5")     # uno por rango: 10k, 1M
+    descarga: str = "D3"
+    lectura: str = "A0"
+    led_verde: str = "D4"
+    led_amarillo: str = "D5"
+    led_rojo: str = "D6"
+    boton_atras: str = "A1"
+    boton_start: str = "A2"
+    boton_siguiente: str = "A3"
+    lcd_rs: str = "D12"
+    lcd_e: str = "D11"
+    lcd_datos: tuple[str, ...] = ("D10", "D9", "D8", "D7")   # DB4..DB7
+
+    def todos(self) -> list[str]:
+        return [*self.carga, self.descarga, self.lectura, self.led_verde, self.led_amarillo, self.led_rojo,
+                self.boton_atras, self.boton_start, self.boton_siguiente, self.lcd_rs, self.lcd_e, *self.lcd_datos]
 
 
 @dataclass(frozen=True)

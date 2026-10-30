@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from capsense.domain.models import Calibracion, Rango
+from capsense.domain.models import Calibracion, Pines, Rango
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -50,6 +50,7 @@ class DemoCfg:
 @dataclass
 class AppConfig:
     calibracion: Calibracion = field(default_factory=Calibracion)
+    pines: Pines = field(default_factory=Pines)
     serial: SerialCfg = field(default_factory=SerialCfg)
     ui: UiCfg = field(default_factory=UiCfg)
     demo: DemoCfg = field(default_factory=DemoCfg)
@@ -68,6 +69,26 @@ def _num(sec: dict[str, Any], clave: str, defecto: float, minimo: float | None =
     if maximo is not None and valor > maximo:
         raise ConfigError(f"'{clave}' = {valor} es mayor que {maximo}")
     return valor
+
+
+def _pines(sec: dict[str, Any], n_rangos: int) -> Pines:
+    d = Pines()
+    valores: dict[str, Any] = {}
+    for campo in ("descarga", "lectura", "led_verde", "led_amarillo", "led_rojo", "boton_atras", "boton_start",
+                  "boton_siguiente", "lcd_rs", "lcd_e"):
+        valores[campo] = str(sec.get(campo, getattr(d, campo))).upper()
+    carga = tuple(str(x).upper() for x in sec.get("carga", d.carga))
+    datos = tuple(str(x).upper() for x in sec.get("lcd_datos", d.lcd_datos))
+    if len(carga) != n_rangos:
+        raise ConfigError(f"[pines] carga debe tener un pin por rango ({n_rangos})")
+    if len(datos) != 4:
+        raise ConfigError("[pines] lcd_datos debe tener 4 pines (DB4 a DB7)")
+    pines = Pines(carga=carga, lcd_datos=datos, **valores)
+    todos = pines.todos()
+    repetidos = sorted({p for p in todos if todos.count(p) > 1})
+    if repetidos:
+        raise ConfigError(f"[pines] hay pines repetidos: {', '.join(repetidos)}")
+    return pines
 
 
 def _tema(valor: object) -> str:
@@ -108,6 +129,7 @@ def desde_dict(datos: dict[str, Any], base: Path = RAIZ_PROYECTO) -> AppConfig:
         adc_n2=_num(med, "adc_n2", d.adc_n2, 1, 1022),
         adc_max=_num(med, "adc_max", d.adc_max, 255, 65535),
         rangos=rangos,
+        r_descarga=_num(med, "r_descarga", d.r_descarga, 1.0, 1e5),
     )
     if not cal.adc_n1 < cal.adc_n2 < cal.adc_max - 2:
         raise ConfigError("Debe cumplirse adc_n1 < adc_n2 < adc_max - 2")
@@ -122,6 +144,7 @@ def desde_dict(datos: dict[str, Any], base: Path = RAIZ_PROYECTO) -> AppConfig:
 
     return AppConfig(
         calibracion=cal,
+        pines=_pines(datos.get("pines", {}), len(cal.rangos)),
         serial=SerialCfg(str(ser.get("puerto", "")), int(_num(ser, "baud", 115200, 300))),
         ui=UiCfg(str(ui.get("host", "127.0.0.1")), int(_num(ui, "puerto_http", 8050, 1, 65535)),
                  usuario=str(ui.get("usuario", "Samuel")), tema=_tema(ui.get("tema", "ambar"))),
