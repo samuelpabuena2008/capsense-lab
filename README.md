@@ -1,10 +1,14 @@
+<p align="center"><img src="src/capsense/ui/assets/logo-cap-fondo.svg" width="120" alt="Logo de CapSense Lab: cubo isométrico con las letras C, A y P"></p>
+
 # CapSense Lab
 
 Medidor de capacitancia RC (1 µF a 1000 µF) con Arduino Uno, y una aplicación de escritorio en Python para mostrar en proyector el resultado, la curva de carga y los cálculos paso a paso.
 
 Proyecto de Samuel y Joel (Ingeniería de Sistemas, Universidad del Norte) para la GeoExpo de Física.
 
-![Aplicación en modo demo: barra lateral, resultado de 100.33 µF, curva de carga y C de cada prueba](docs/img/dashboard.jpg)
+![Tema Ámbar: tarjetas con mini-gráficas, curva de carga con brillo, calidad de la medición, desviación por prueba y mediciones recientes](docs/img/dashboard.jpg)
+
+![Tema Neón, la misma medición](docs/img/dashboard-neon.jpg)
 
 ## Qué muestra
 
@@ -16,6 +20,15 @@ Proyecto de Samuel y Joel (Ingeniería de Sistemas, Universidad del Norte) para 
 ![Panel de cálculos paso a paso](docs/img/pasos.jpg)
 
 ## Diseño
+
+Dos temas que se cambian desde la barra lateral (o con `[ui] tema` en `config/capsense.toml`):
+
+- **Ámbar**: negro carbón con naranja.
+- **Neón**: azul profundo con turquesa y violeta, tarjetas tipo vidrio.
+
+El logo es un cubo isométrico con las letras **C**, **A** y **P** recortadas en sus tres caras (`scripts/generar_logo.py`).
+
+La vista **Medición** muestra tarjetas con mini-gráficas y la comparación con la medición anterior, la curva de carga con brillo, un panel de *Calidad de la medición* (meseta, repetibilidad, curva capturada y coincidencia con el Arduino), la desviación de cada prueba y las mediciones recientes. **Historial** agrega un mapa de calor de repetibilidad.
 
 El estilo sigue la skill [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill): **Dark Mode (OLED) + Data-Dense Dashboard + Real-Time Monitoring**, con el par tipográfico *Dashboard Data* (sans para etiquetas, monoespaciada para los valores), íconos SVG en vez de emojis, estados con texto además de color, foco visible con teclado y respeto por `prefers-reduced-motion`.
 

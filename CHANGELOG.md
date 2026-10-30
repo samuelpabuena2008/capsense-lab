@@ -2,6 +2,18 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.4.0] - 2026-10-29
+
+### Diseño
+- Logo nuevo: cubo isométrico con C, A y P recortadas en sus caras (SVG generado por `scripts/generar_logo.py`).
+- Dos temas, Ámbar (negro y naranja) y Neón (azul, turquesa y violeta), con selector en la barra lateral; se recuerda entre sesiones.
+- Vista Medición rehecha: saludo y fecha en la cabecera, tarjetas KPI con mini-gráficas y variación contra la medición anterior, curva de carga con área y brillo, panel de calidad por factores, desviación de cada prueba y mediciones recientes.
+- Historial con mapa de calor de repetibilidad.
+- La curva muestra por defecto la última prueba (la extendida).
+
+### Corregido
+- La ventana de escritorio se colgaba: pywebview recorría el objeto ventana expuesto a la página.
+
 ## [0.3.0] - 2026-10-29
 
 ### Aplicación de escritorio
