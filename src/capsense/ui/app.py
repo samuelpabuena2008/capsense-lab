@@ -68,6 +68,6 @@ def crear_app(session: Session, cfg: AppConfig, modo_inicial: str = "demo") -> t
         suppress_callback_exceptions=False,
     )
     ctl = Controlador(session, cfg)
-    app.layout = crear_layout(cfg, modo_inicial)
+    app.layout = lambda: crear_layout(cfg, modo_inicial)   # función: saludo y fecha al día en cada carga
     callbacks.registrar(app, ctl)
     return app, ctl

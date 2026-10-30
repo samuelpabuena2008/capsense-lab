@@ -25,6 +25,8 @@ baud = 115200         # firmware v2.2. La v2.1 usa 9600.
 [ui]
 host = "127.0.0.1"
 puerto_http = 8050
+usuario = "Samuel"    # para el saludo de la cabecera
+tema = "ambar"        # "ambar" (negro y naranja) o "neon" (azul, turquesa y violeta)
 
 [demo]
 c_uf = 100.0          # capacitor simulado

@@ -34,6 +34,8 @@ class SerialCfg:
 class UiCfg:
     host: str = "127.0.0.1"
     puerto_http: int = 8050
+    usuario: str = "Samuel"
+    tema: str = "ambar"
 
 
 @dataclass
@@ -66,6 +68,13 @@ def _num(sec: dict[str, Any], clave: str, defecto: float, minimo: float | None =
     if maximo is not None and valor > maximo:
         raise ConfigError(f"'{clave}' = {valor} es mayor que {maximo}")
     return valor
+
+
+def _tema(valor: object) -> str:
+    v = str(valor)
+    if v not in ("ambar", "neon"):
+        raise ConfigError(f"[ui] tema debe ser \"ambar\" o \"neon\" (llegó {valor!r})")
+    return v
 
 
 def _firmware_demo(valor: object) -> str:
@@ -114,7 +123,8 @@ def desde_dict(datos: dict[str, Any], base: Path = RAIZ_PROYECTO) -> AppConfig:
     return AppConfig(
         calibracion=cal,
         serial=SerialCfg(str(ser.get("puerto", "")), int(_num(ser, "baud", 115200, 300))),
-        ui=UiCfg(str(ui.get("host", "127.0.0.1")), int(_num(ui, "puerto_http", 8050, 1, 65535))),
+        ui=UiCfg(str(ui.get("host", "127.0.0.1")), int(_num(ui, "puerto_http", 8050, 1, 65535)),
+                 usuario=str(ui.get("usuario", "Samuel")), tema=_tema(ui.get("tema", "ambar"))),
         demo=DemoCfg(
             c_uf=_num(demo, "c_uf", 100.0, 0.0, 5000.0),
             meseta_pct=_num(demo, "meseta_pct", 97.0, 50.0, 100.0),

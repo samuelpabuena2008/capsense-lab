@@ -19,6 +19,7 @@ from capsense.io.serial_source import listar_puertos
 from capsense.services import storage
 from capsense.ui import figures, formulas
 from capsense.ui.layout import VISTAS, icono
+from capsense.ui.temas import Paleta, paleta
 
 if TYPE_CHECKING:
     from capsense.ui.app import Controlador
@@ -37,7 +38,7 @@ def aviso(texto: str | list, tipo: str = "ambar") -> html.Div:
     return html.Div([icono("ico-alerta"), html.Div(texto)], className=f"banner {tipo}", role="alert")
 
 
-# ---------------- ayudas ----------------
+# ---------------- datos ----------------
 def _elegir_medicion(mediciones: list[Measurement], sel: str | int | None) -> tuple[Measurement | None, bool]:
     """(medición a mostrar, hay una medición nueva en curso sin pruebas todavía)."""
     if not mediciones:
@@ -72,67 +73,176 @@ def _valores(m: Measurement, calc: list[ph.RunCalculado], cal: Calibracion) -> d
                 e=res.e_uj, meseta=res.meseta_pct, n=res.n, parcial=True)
 
 
-def _hero(m: Measurement | None, vals: dict | None, cal: Calibracion, en_curso: bool) -> tuple[list, list]:
-    if m is None:
-        return [html.Div("Sin medición", className="hero-valor vacio"),
-                html.Div("Conecta una fuente y pulsa Medir (tecla M)", className="hero-meta")], []
-    if m.error and not m.runs:
-        return [html.Div("Error", className="hero-valor error"),
-                html.Div(m.error, className="hero-inc")], []
+def _completas(mediciones: list[Measurement], cal: Calibracion) -> list[tuple[Measurement, dict]]:
+    out = []
+    for m in mediciones:
+        if m.completa and not m.error and m.runs:
+            vals = _valores(m, _calcular(m, cal), cal)
+            if vals:
+                out.append((m, vals))
+    return out
+
+
+# ---------------- piezas de la vista Medición ----------------
+def _delta(actual: float, previo: float | None, ref: str) -> html.Span:
+    if previo is None or previo == 0:
+        return html.Span("primera medición", className="kpi-nota")
+    d = (actual / previo - 1) * 100
+    if abs(d) < 0.05:
+        return html.Span(f"= igual que {ref}", className="delta igual")
+    ico = "ico-flecha-arriba" if d > 0 else "ico-flecha-abajo"
+    return html.Span([icono(ico), f"{d:+.2f} % vs {ref}"], className="delta " + ("sube" if d > 0 else "baja"))
+
+
+def _kpi(titulo: str, ico: str, valor, pie, spark: str, clase: str = "", extra: list | None = None) -> html.Div:
+    hijos = [html.Div(icono(ico), className="kpi-icono"), html.Div(titulo, className="kpi-etiqueta"),
+             html.Div(valor, className="kpi-valor")]
+    hijos += extra or []
+    hijos.append(html.Div(pie, className="kpi-pie"))
+    if spark:
+        hijos.append(html.Img(src=spark, className="kpi-spark", alt=""))
+    return html.Div(hijos, className=f"card kpi {clase}".strip())
+
+
+def _kpis(m: Measurement | None, vals: dict | None, calc: list[ph.RunCalculado],
+          historial: list[tuple[Measurement, dict]], cal: Calibracion, p: Paleta, en_curso: bool) -> list:
+    secundarias = (("Constante de tiempo τ", "ico-reloj"), ("Meseta P", "ico-meseta"),
+                   ("Energía almacenada", "ico-rayo"))
+    if m is None or (m.error and not m.runs):
+        texto = "Sin medición" if m is None else "Error"
+        nota = "Conecta una fuente y pulsa Medir (tecla M)" if m is None else (m.error or "")
+        clase = "kpi-principal kpi-vacio" if m is None else "kpi-principal kpi-error"
+        vacias = [_kpi(t, i, "—", html.Span("", className="kpi-nota"), "", "kpi-vacio") for t, i in secundarias]
+        return [_kpi("Capacitancia", "ico-capacitor", texto, html.Span(nota, className="kpi-nota"), "", clase)] + vacias
     if vals is None:
-        return [html.Div("Midiendo…", className="hero-valor vacio"), html.Div(className="progreso",
-                                                                               children=html.Div(style={"width": "4%"}))], []
+        vacias = [_kpi(t, i, "—", html.Span("", className="kpi-nota"), "", "kpi-vacio") for t, i in secundarias]
+        return [_kpi("Capacitancia", "ico-capacitor", "Midiendo…",
+                     html.Span("esperando la primera prueba", className="kpi-nota"), "", "kpi-principal kpi-vacio",
+                     [html.Div(html.Div(style={"width": "4%"}), className="progreso")])] + vacias
+
+    previas = [(mm, vv) for mm, vv in historial if mm.id < m.id]
+    prev = previas[-1] if previas else None
+    ref = f"#{prev[0].id}" if prev else ""
+    serie = [vv for mm, vv in historial if mm.id <= m.id][-12:]
+    if len(serie) >= 2:
+        s_c, s_tau = [v["c"] for v in serie], [v["tau"] for v in serie]
+        s_mes, s_e = [v["meseta"] for v in serie], [v["e"] for v in serie]
+    else:                                    # una sola medición: la serie son sus pruebas
+        s_c = [rc.c_uf for rc in calc]
+        s_tau = [rc.tau_s * 1000 for rc in calc]
+        s_mes = [rc.ajuste.P / cal.adc_max * 100 for rc in calc]
+        s_e = [ph.carga_energia(rc.c_uf, cal.v_entrada)[1] for rc in calc]
+
     num, unidad = ph.formato_c(vals["c"])
     dnum = ph.formato_delta(vals["delta"], vals["c"])
-    fuga = ph.nivel_fuga(vals["meseta"])
-    rango = cal.etiqueta(m.rango)
     parcial = vals["parcial"] and not m.completa
-    hero: list = [
-        html.Div([html.Span(num, className="hero-num"), html.Span(unidad, className="hero-unidad")],
-                 className="hero-valor" + (" tenue" if parcial or en_curso else "")),
-        html.Div([f"± {dnum} {unidad}", html.Span("·", className="sep"), f"± {vals['inc']:.2f} %"],
-                 className="hero-inc"),
-        html.Div([
-            html.Span([icono("ico-resistencia"), NOMBRE_RANGO.get(rango, rango)], className="chip",
-                      title="Resistencia de carga usada"),
-            html.Span(f"{vals['n']} prueba{'s' if vals['n'] != 1 else ''}", className="chip"),
-            html.Span(f"Meseta {vals['meseta']:.1f} %", className="chip", title="P promedio en % de 1023"),
-            html.Span(f"Fuga {fuga}", className=f"chip fuga-{fuga}"),
-        ], className="chips"),
-    ]
+    extra = [html.Div([f"± {dnum} {unidad}", html.Span("·", className="sep"), f"± {vals['inc']:.2f} %"],
+                      className="kpi-inc")]
     if parcial:
         n_max = m.n_max or 5
-        pct = min(100, len(m.runs) / n_max * 100)
-        hero += [html.Div(html.Div(style={"width": f"{pct:.0f}%"}), className="progreso"),
-                 html.Div(f"Midiendo · prueba {len(m.runs)} de {n_max} (valores parciales)", className="hero-meta")]
+        extra.append(html.Div(html.Div(style={"width": f"{min(100, len(m.runs) / n_max * 100):.0f}%"}),
+                              className="progreso"))
+        pie_c = html.Span(f"midiendo · prueba {len(m.runs)} de {n_max}", className="kpi-nota")
+    elif en_curso:
+        pie_c = html.Span("nueva medición en curso…", className="kpi-nota")
     else:
-        meta = f"Medición #{m.id} · {m.inicio:%H:%M:%S} · {m.origen}" + (f" · v{m.firmware}" if m.firmware else "")
-        hero.append(html.Div("Nueva medición en curso…" if en_curso else meta, className="hero-meta"))
-    banner = []
-    if fuga == "alta":
-        banner.append(aviso([html.Strong("Fuga alta. "),
-                             f"La meseta llegó solo al {vals['meseta']:.1f} % de 1023. Revisa el capacitor y su "
-                             "polaridad: el valor puede no ser confiable."], "rojo"))
-    if m.error:
-        banner.append(aviso([html.Strong("Error: "), m.error], "rojo"))
-    return hero, banner
+        pie_c = _delta(vals["c"], prev[1]["c"] if prev else None, ref)
+    principal = _kpi("Capacitancia", "ico-capacitor", [num, html.Small(unidad)], pie_c,
+                     figures.sparkline(s_c, p), "kpi-principal", extra)
 
-
-def _tarjetas(vals: dict | None, cal: Calibracion) -> list:
-    if vals is None:
-        return []
-    meseta = f"{vals['meseta']:.1f} %"
-    datos = [
-        ("τ", ph.formato_tau(vals["tau"]), "constante"),
-        ("R", ph.formato_r(vals["r"]), "carga + pin"),
-        ("Q", f"{vals['q']:.4g} µC" if vals["q"] < 1000 else f"{vals['q'] / 1000:.4g} mC", "C·V"),
-        ("E", f"{vals['e']:.4g} µJ" if vals["e"] < 1000 else f"{vals['e'] / 1000:.4g} mJ", "½·C·V²"),
-        ("V", f"{cal.v_entrada:.2f} V", "entrada"),
-        ("P", meseta, "meseta"),
+    fuga = ph.nivel_fuga(vals["meseta"])
+    e = vals["e"]
+    e_txt = [f"{e:.4g}", html.Small("µJ")] if e < 1000 else [f"{e / 1000:.4g}", html.Small("mJ")]
+    q = vals["q"]
+    q_txt = f"Q = {q:.4g} µC" if q < 1000 else f"Q = {q / 1000:.4g} mC"
+    tau_num, tau_u = ph.formato_tau(vals["tau"]).split(" ")
+    return [
+        principal,
+        _kpi("Constante de tiempo τ", "ico-reloj", [tau_num, html.Small(tau_u)],
+             _delta(vals["tau"], prev[1]["tau"] if prev else None, ref), figures.sparkline(s_tau, p)),
+        _kpi("Meseta P", "ico-meseta", [f"{vals['meseta']:.1f}", html.Small("%")],
+             html.Span(f"fuga {fuga}", className=f"chip fuga-{fuga}"), figures.sparkline(s_mes, p)),
+        _kpi("Energía almacenada", "ico-rayo", e_txt, html.Span(q_txt, className="kpi-nota"),
+             figures.sparkline(s_e, p)),
     ]
-    return [html.Div([html.Div([html.Span(s, className="t-sim"), html.Span(d, className="t-desc")],
-                               className="t-cab"),
-                      html.Div(v, className="t-val")], className="tarjeta") for s, v, d in datos]
+
+
+def _factor(nombre: str, ico: str, valor: str, pct: float, clase: str = "") -> html.Div:
+    return html.Div([
+        html.Div(icono(ico), className="factor-ico"),
+        html.Div([html.Div(nombre, className="factor-nombre"),
+                  html.Div(html.Div(style={"width": f"{max(3.0, min(100.0, pct)):.0f}%"}),
+                           className=f"barra {clase}".strip())]),
+        html.Div(valor, className="factor-valor"),
+    ], className="factor")
+
+
+def _calidad(m: Measurement | None, vals: dict | None, calc: list[ph.RunCalculado], cal: Calibracion) -> list:
+    if m is None or vals is None:
+        return [html.Div("Aquí aparece qué tan confiable es la medición: fuga, repetibilidad, curva capturada "
+                         "y concordancia con el Arduino.", className="vacio-msg")]
+    fuga = ph.nivel_fuga(vals["meseta"])
+    n_muestras = max((len(rc.run.samples) for rc in calc), default=0)
+    chequeos = [c for rc in calc for paso in steps.pasos_prueba(rc, cal) for c in paso.chequeos]
+    if m.completa and m.reportado:
+        chequeos += [c for paso in steps.pasos_resumen(m, calc, cal) for c in paso.chequeos]
+    ok = sum(c.coincide for c in chequeos)
+    pct_ok = ok / len(chequeos) * 100 if chequeos else 0
+    hijos = [html.Div([
+        _factor(f"Meseta · fuga {fuga}", "ico-meseta", f"{vals['meseta']:.1f} %", vals["meseta"],
+                {"baja": "", "media": "aviso", "alta": "critico"}[fuga]),
+        _factor(f"Repetibilidad · {vals['n']} pruebas", "ico-objetivo", f"± {vals['inc']:.2f} %",
+                100 - vals["inc"] * 25, "aviso" if vals["inc"] > 2 else ""),
+        _factor("Curva capturada" if n_muestras else "Curva · la v2.1 no la envía", "ico-curva",
+                f"{n_muestras} pts" if n_muestras else "—", n_muestras),
+        _factor(f"Coincide con el Arduino · {ok}/{len(chequeos)}", "ico-escudo", f"{pct_ok:.0f} %", pct_ok,
+                "" if pct_ok == 100 else "aviso"),
+    ], className="factores")]
+    rango = cal.etiqueta(m.rango)
+    chips = [html.Span([icono("ico-resistencia"), NOMBRE_RANGO.get(rango, rango)], className="chip"),
+             html.Span([icono("ico-barras"), f"{vals['n']} pruebas"], className="chip")]
+    if m.firmware:
+        chips.append(html.Span(f"firmware v{m.firmware}", className="chip"))
+    hijos.append(html.Div(chips, className="chips"))
+    if fuga == "alta":
+        hijos.append(aviso([html.Strong("Fuga alta. "), f"La meseta llegó solo al {vals['meseta']:.1f} % de 1023. "
+                            "Revisa el capacitor y su polaridad: el valor puede no ser confiable."], "rojo"))
+    if m.error:
+        hijos.append(aviso([html.Strong("Error: "), m.error], "rojo"))
+    return hijos
+
+
+def _recientes(mediciones: list[Measurement], historial: list[tuple[Measurement, dict]]) -> list:
+    if not mediciones:
+        return [html.Div("Las mediciones de la sesión aparecen aquí.", className="vacio-msg")]
+    por_id = {mm.id: vv for mm, vv in historial}
+    items = []
+    for m in list(reversed(mediciones))[:6]:
+        sub = f"#{m.id} · {m.inicio:%H:%M:%S} · {m.origen}"
+        if m.error:
+            ico, clase, titulo, lado = "ico-alerta", "error", m.error, html.Span("error", className="rojo")
+        elif not m.completa:
+            ico, clase, titulo = "ico-actividad", "curso", "Midiendo…"
+            lado = html.Span(f"{len(m.runs)}/{m.n_max or 5}", className="kpi-nota")
+        else:
+            vals = por_id.get(m.id)
+            if vals is None:
+                continue
+            num, u = ph.formato_c(vals["c"])
+            ico, clase = "ico-check", "ok"
+            titulo = f"{num} {u}  ± {vals['inc']:.2f} %"
+            previas = [vv for mm, vv in historial if mm.id < m.id]
+            if previas:
+                d = (vals["c"] / previas[-1]["c"] - 1) * 100
+                lado = html.Span(f"{d:+.2f} %", className="delta " + ("sube" if d >= 0 else "baja"))
+            else:
+                lado = html.Span("primera", className="kpi-nota")
+        items.append(html.Div([
+            html.Div(icono(ico), className=f"item-ico {clase}"),
+            html.Div([html.Div(titulo, className="item-titulo"), html.Div(sub, className="item-sub")]),
+            html.Div(lado, className="item-lado"),
+        ], className="item"))
+    return items
 
 
 def _historial(mediciones: list[Measurement], cal: Calibracion) -> html.Table | html.Div:
@@ -172,20 +282,21 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
     ids_nav = [f"nav-{clave}" for clave, _n, _i in VISTAS]
     ids_vista = [f"vista-{clave}" for clave, _n, _i in VISTAS]
 
-    # Navegación entre vistas: en el cliente, sin ida y vuelta al servidor
+    # Navegación entre vistas en el cliente ("Ver todas" lleva al historial)
     app.clientside_callback(
         """
         function() {
             const nombres = NOMBRES;
+            const ids = IDS;
             const ctx = window.dash_clientside.callback_context;
             let i = 0;
             if (ctx.triggered.length && ctx.triggered[0].prop_id !== ".") {
                 const id = ctx.triggered[0].prop_id.split(".")[0];
-                i = Math.max(0, IDS.indexOf(id));
+                i = id === "ir-historial" ? 2 : Math.max(0, ids.indexOf(id));
             }
             const clases = nombres.map((_, k) => k === i ? "nav-item activa" : "nav-item");
             const estilos = nombres.map((_, k) => k === i ? {} : {display: "none"});
-            setTimeout(() => window.dispatchEvent(new Event("resize")), 30);
+            [40, 250].forEach(ms => setTimeout(() => window.dispatchEvent(new Event("resize")), ms));
             return [nombres[i], ...clases, ...estilos];
         }
         """.replace("NOMBRES", json.dumps([n for _c, n, _i in VISTAS])).replace("IDS", json.dumps(ids_nav)),
@@ -193,6 +304,31 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
         *[Output(i, "className") for i in ids_nav],
         *[Output(i, "style") for i in ids_vista],
         *[Input(i, "n_clicks") for i in ids_nav],
+        Input("ir-historial", "n_clicks"),
+    )
+    # Tema: se guarda en el almacenamiento local de la ventana
+    app.clientside_callback(
+        """
+        function(a, n, actual) {
+            const ctx = window.dash_clientside.callback_context;
+            if (!ctx.triggered.length || ctx.triggered[0].prop_id === ".") {
+                return window.dash_clientside.no_update;
+            }
+            return ctx.triggered[0].prop_id.startsWith("tema-neon") ? "neon" : "ambar";
+        }
+        """,
+        Output("tema", "data"), Input("tema-ambar", "n_clicks"), Input("tema-neon", "n_clicks"),
+        State("tema", "data"), prevent_initial_call=True,
+    )
+    app.clientside_callback(
+        """
+        function(tema) {
+            const t = tema === "neon" ? "neon" : "ambar";
+            return ["app tema-" + t, t === "ambar" ? "activo" : "", t === "neon" ? "activo" : ""];
+        }
+        """,
+        Output("app", "className"), Output("tema-ambar", "className"), Output("tema-neon", "className"),
+        Input("tema", "data"),
     )
     app.clientside_callback(
         "function(n) { if (n) { window.capsensePantallaCompleta(); } return window.dash_clientside.no_update; }",
@@ -220,12 +356,13 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
                 "\n".join(v.lineas[-60:]))
 
     @app.callback(
-        Output("sel-medicion", "options"), Output("hero", "children"), Output("banner", "children"),
-        Output("tarjetas", "children"), Output("graf-pruebas", "figure"), Output("nota-incert", "children"),
-        Output("historial", "children"), Output("sel-prueba", "options"), Output("ruta-logs", "children"),
-        Input("ver", "data"), Input("sel-medicion", "value"),
+        Output("sel-medicion", "options"), Output("kpis", "children"), Output("calidad", "children"),
+        Output("recientes", "children"), Output("graf-desviacion", "figure"), Output("historial", "children"),
+        Output("graf-mapa", "figure"), Output("sel-prueba", "options"), Output("ruta-logs", "children"),
+        Input("ver", "data"), Input("sel-medicion", "value"), Input("tema", "data"),
     )
-    def resultado(_ver, sel):
+    def resultado(_ver, sel, tema):
+        p = paleta(tema)
         v = session.snapshot()
         opciones = [{"label": "Última medición", "value": "ultima"}] + [
             {"label": f"#{m.id} · {m.inicio:%H:%M:%S}" + (" · error" if m.error else ""), "value": str(m.id)}
@@ -233,45 +370,56 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
         m, en_curso = _elegir_medicion(v.mediciones, sel)
         calc = _calcular(m, cal) if m else []
         vals = _valores(m, calc, cal) if m else None
-        hero, banner = _hero(m, vals, cal, en_curso)
-        fig_p = figures.pruebas(calc, cal) if calc else figures.vacia("Sin pruebas")
-        nota = "banda = media ± (Cmax − Cmin)/2, igual que el firmware" if len(calc) > 1 else ""
-        op_pruebas = [{"label": "Todas las pruebas", "value": "todas"}] + [
-            {"label": f"Prueba {rc.run.i}" + (" · curva extendida" if rc.run.ext else ""), "value": str(rc.run.i)}
+        historial = _completas(v.mediciones, cal)
+        fig_d = figures.desviaciones(calc, cal, p) if calc else figures.vacia("Sin pruebas", p)
+        op_pruebas = [{"label": "Última prueba", "value": "ultima"},
+                      {"label": "Todas las pruebas", "value": "todas"}] + [
+            {"label": f"Prueba {rc.run.i}" + (" · extendida" if rc.run.ext else ""), "value": str(rc.run.i)}
             for rc in calc]
         rutas = ""
         if session.storage is not None:
             rutas = f"Log automático de la sesión: {session.storage.carpeta / session.storage.base}_*"
-        return (opciones, hero, banner, _tarjetas(vals, cal), fig_p, nota, _historial(v.mediciones, cal),
-                op_pruebas, rutas)
+        return (opciones, _kpis(m, vals, calc, historial, cal, p, en_curso), _calidad(m, vals, calc, cal),
+                _recientes(v.mediciones, historial), fig_d, _historial(v.mediciones, cal),
+                figures.mapa_repetibilidad(v.mediciones, cal, p), op_pruebas, rutas)
 
     @app.callback(
         Output("graf-curva", "figure"), Output("pasos", "children"), Output("pasos-sub", "children"),
-        Input("ver", "data"), Input("sel-medicion", "value"), Input("sel-prueba", "value"),
+        Output("nota-curva", "children"),
+        Input("ver", "data"), Input("sel-medicion", "value"), Input("sel-prueba", "value"), Input("tema", "data"),
     )
-    def curva_y_pasos(_ver, sel, sel_prueba):
+    def curva_y_pasos(_ver, sel, sel_prueba, tema):
+        p = paleta(tema)
         v = session.snapshot()
         m, _ = _elegir_medicion(v.mediciones, sel)
         if m is None or not m.runs:
-            return (figures.vacia("Sin datos todavía · pulsa Medir"),
+            return (figures.vacia("Sin datos todavía · pulsa Medir", p),
                     html.Div("Aquí aparecen las fórmulas con los números de la medición, paso a paso.",
-                             className="vacio-msg"), "")
+                             className="vacio-msg"), "Mide. Ajusta. Explica.", "")
         calc = _calcular(m, cal)
         if not calc:
             raise PreventUpdate
-        sel_prueba = sel_prueba or "todas"
-        fig = figures.curva_carga(calc, sel_prueba, cal, uirevision=f"{m.id}-{sel_prueba}")
+        sel_prueba = sel_prueba or "ultima"
+        if sel_prueba == "ultima":
+            sel_prueba = str(calc[-1].run.i)
+        fig = figures.curva_carga(calc, sel_prueba, cal, uirevision=f"{m.id}-{sel_prueba}-{tema}", p=p)
         elegida = next((rc for rc in calc if str(rc.run.i) == sel_prueba), calc[-1])
         p_prueba = steps.pasos_prueba(elegida, cal)
         p_res = steps.pasos_resumen(m, calc, cal) if m.completa else []
-        bloques = [html.H3(f"Prueba {elegida.run.i} · rango {NOMBRE_RANGO.get(elegida.run.etiqueta, elegida.run.etiqueta)}",
-                           className="pasos-sep")]
+        etiqueta = NOMBRE_RANGO.get(elegida.run.etiqueta, elegida.run.etiqueta)
+        bloques = [html.H3(f"Prueba {elegida.run.i} · rango {etiqueta}", className="pasos-sep")]
         bloques += formulas.panel_pasos(p_prueba)
         if p_res:
             bloques.append(html.H3(f"Resultado de la medición · {len(calc)} pruebas", className="pasos-sep"))
             bloques += formulas.panel_pasos(p_res, inicio=len(p_prueba) + 1)
-        sub = f"#{m.id} · prueba {elegida.run.i} de {len(calc)} · recalculado en Python desde t₁ y t₂"
-        return fig, bloques, sub
+        sub = f"Medición #{m.id} · prueba {elegida.run.i} de {len(calc)} · recalculado en Python desde t₁ y t₂"
+        if sel_prueba == "todas":
+            nota = f"{len(calc)} pruebas superpuestas · medición #{m.id}"
+        else:
+            aj = elegida.ajuste
+            nota = (f"prueba {elegida.run.i} · t₁ = {aj.t1 / 1000:.2f} ms · t₂ = {aj.t2 / 1000:.2f} ms · "
+                    f"{len(elegida.run.samples)} muestras")
+        return fig, bloques, sub, nota
 
     @app.callback(
         Output("grupo-arduino", "style"), Output("grupo-replay", "style"), Output("panel-demo", "style"),

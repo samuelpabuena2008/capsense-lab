@@ -31,6 +31,15 @@ ICONOS = {
     "resistencia": '<path d="M2 12h4l2-4 3 8 3-8 3 8 2-4h3"/>',
     "rayo": '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
     "reloj": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    "flecha-arriba": '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    "flecha-abajo": '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    "calendario": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    "objetivo": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    "meseta": '<path d="M3 20c3-9 6-13 10-14h8"/><path d="M3 20h18" opacity="0.5"/>',
+    "curva": '<path d="M3 20c2-8 5-12 9-13s7-1 9-1"/><circle cx="7" cy="13" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="17" cy="6.5" r="1"/>',
+    "escudo": '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+    "tema": '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="black"/>',
+    "barras": '<path d="M5 20V10M12 20V4M19 20v-7"/>',
 }
 
 PLANTILLA = ("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' "

@@ -7,6 +7,7 @@ Monitoring", par tipográfico "Dashboard Data" (sans para etiquetas, mono para v
 from __future__ import annotations
 
 import math
+from datetime import datetime
 
 from dash import dcc, html
 
@@ -29,11 +30,27 @@ def _control(etiqueta: str, hijo, clase: str = "") -> html.Div:
     return html.Div([html.Label(etiqueta, className="ctl-label"), hijo], className=f"ctl {clase}".strip())
 
 
-def _barra_lateral() -> html.Aside:
+GRAF_CFG = {"displaylogo": False, "responsive": True, "displayModeBar": False}
+MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
+
+def saludo(usuario: str, ahora: datetime | None = None) -> str:
+    h = (ahora or datetime.now()).hour
+    parte = "Buenos días" if 5 <= h < 12 else ("Buenas tardes" if 12 <= h < 19 else "Buenas noches")
+    return f"{parte}, {usuario}" if usuario else parte
+
+
+def fecha_larga(ahora: datetime | None = None) -> str:
+    d = ahora or datetime.now()
+    return f"{DIAS[d.weekday()]} {d.day} {MESES[d.month - 1]} {d.year}"
+
+
+def _barra_lateral(tema: str) -> html.Aside:
     return html.Aside([
         html.Div([
-            html.Div(icono("ico-capacitor"), className="logo"),
-            html.Div([html.Div("CapSense Lab", className="marca-nombre"),
+            html.Img(src="/assets/logo-cap.svg", className="logo", alt="Logo CapSense: cubo con las letras CAP"),
+            html.Div([html.Div(["Cap", html.B("Sense"), " Lab"], className="marca-nombre"),
                       html.Div("Medidor de capacitancia RC", className="marca-sub")]),
         ], className="marca"),
         html.Nav([
@@ -42,6 +59,12 @@ def _barra_lateral() -> html.Aside:
             for i, (clave, nombre, ico) in enumerate(VISTAS, 1)
         ], className="nav", **{"aria-label": "Vistas"}),
         html.Div(className="espaciador"),
+        html.Div([
+            html.Button([html.Span(className="muestra muestra-ambar"), "Ámbar"], id="tema-ambar",
+                        className="activo" if tema == "ambar" else "", title="Tema negro y naranja"),
+            html.Button([html.Span(className="muestra muestra-neon"), "Neón"], id="tema-neon",
+                        className="activo" if tema == "neon" else "", title="Tema azul, turquesa y violeta"),
+        ], className="selector-tema", role="group", **{"aria-label": "Tema"}),
         html.Div([
             html.Div([html.Span(className="punto"), html.Span(id="estado-pill")],
                      id="estado-caja", className="estado gris"),
@@ -53,15 +76,19 @@ def _barra_lateral() -> html.Aside:
     ], className="lateral")
 
 
-def _cabecera() -> html.Header:
+def _cabecera(usuario: str) -> html.Header:
     return html.Header([
-        html.Div([html.H1("Medición", id="titulo-vista"), html.Div(id="pasos-sub", className="cab-sub")],
-                 className="cab-titulo"),
         html.Div([
+            html.Div(saludo(usuario), className="saludo"),
+            html.H1("Medición", id="titulo-vista"),
+            html.Div(id="pasos-sub", className="cab-sub"),
+        ], className="cab-titulo"),
+        html.Div([
+            html.Span([icono("ico-calendario"), fecha_larga()], className="chip-fecha"),
             dcc.Dropdown(id="sel-medicion", value="ultima", clearable=False, searchable=False,
                          className="dd dd-medicion", options=[{"label": "Última medición", "value": "ultima"}]),
-            dcc.Dropdown(id="sel-prueba", value="todas", clearable=False, searchable=False,
-                         className="dd dd-prueba", options=[{"label": "Todas las pruebas", "value": "todas"}]),
+            dcc.Dropdown(id="sel-prueba", value="ultima", clearable=False, searchable=False,
+                         className="dd dd-prueba", options=[{"label": "Última prueba", "value": "ultima"}]),
             html.Button(icono("ico-pantalla"), id="btn-pantalla", className="btn btn-icono",
                         title="Pantalla completa (F11)", **{"aria-label": "Pantalla completa"}),
         ], className="cab-acciones"),
@@ -70,30 +97,30 @@ def _cabecera() -> html.Header:
 
 def _vista_medicion() -> html.Section:
     return html.Section([
+        html.Div(id="kpis", className="kpis"),
         html.Div([
-            html.Div([
-                html.Div("Capacitancia", className="kpi-etiqueta"),
-                html.Div(id="hero"),
-                html.Div(id="banner"),
-            ], className="card card-hero"),
-            html.Div(id="tarjetas", className="tarjetas"),
-        ], className="col-kpi"),
+            html.Div([html.Div([html.H2("Curva de carga"), html.Div(id="nota-curva", className="card-nota")]),
+                      html.Span("V(t) = P · (1 − e^(−t/τ))", className="formula-chip")], className="card-cab"),
+            dcc.Graph(id="graf-curva", className="graf graf-curva",
+                      config={"displaylogo": False, "responsive": True,
+                              "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                              "toImageButtonOptions": {"filename": "curva_capsense", "scale": 2}}),
+        ], className="card card-curva"),
         html.Div([
-            html.Div([
-                html.Div([html.H2("Curva de carga"),
-                          html.Span("V(t) = P·(1 − e^(−t/τ))", className="formula-chip")], className="card-cab"),
-                dcc.Graph(id="graf-curva", className="graf graf-curva",
-                          config={"displaylogo": False, "responsive": True,
-                                  "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-                                  "toImageButtonOptions": {"filename": "curva_capsense", "scale": 2}}),
-            ], className="card card-curva"),
-            html.Div([
-                html.Div([html.H2("C de cada prueba"), html.Div(id="nota-incert", className="card-nota")],
-                         className="card-cab"),
-                dcc.Graph(id="graf-pruebas", className="graf graf-pruebas",
-                          config={"displaylogo": False, "responsive": True, "displayModeBar": False}),
-            ], className="card card-pruebas"),
-        ], className="col-graficas"),
+            html.Div([html.H2("Calidad de la medición")], className="card-cab"),
+            html.Div(id="calidad"),
+        ], className="card card-calidad"),
+        html.Div([
+            html.Div([html.Div([html.H2("Desviación de cada prueba"),
+                                html.Div("respecto al promedio · banda = semi-rango del firmware",
+                                         className="card-nota")])], className="card-cab"),
+            dcc.Graph(id="graf-desviacion", className="graf", config=GRAF_CFG),
+        ], className="card card-desviacion"),
+        html.Div([
+            html.Div([html.H2("Mediciones recientes"),
+                      html.Button("Ver todas", id="ir-historial", className="btn btn-tenue")], className="card-cab"),
+            html.Div(id="recientes", className="recientes"),
+        ], className="card card-recientes"),
     ], id="vista-medicion", className="vista vista-medicion")
 
 
@@ -105,6 +132,12 @@ def _vista_calculos() -> html.Section:
 
 def _vista_historial() -> html.Section:
     return html.Section([
+        html.Div([
+            html.Div([html.Div([html.H2("Mapa de repetibilidad"),
+                                html.Div("cada celda: C de una prueba, coloreada por cuánto se aparta del promedio "
+                                         "de su medición", className="card-nota")])], className="card-cab"),
+            dcc.Graph(id="graf-mapa", className="graf", config=GRAF_CFG),
+        ], className="card card-mapa"),
         html.Div([
             html.Div([
                 html.H2("Mediciones de la sesión"),
@@ -199,14 +232,16 @@ def _vista_conexion(cfg: AppConfig, modo_inicial: str) -> html.Section:
 
 
 def crear_layout(cfg: AppConfig, modo_inicial: str) -> html.Div:
+    tema = cfg.ui.tema
     return html.Div([
         dcc.Interval(id="tick", interval=400),
         dcc.Store(id="ver", data=-1),
         dcc.Store(id="vista", data="medicion"),
+        dcc.Store(id="tema", data=tema, storage_type="local"),
         dcc.Download(id="descarga"),
-        _barra_lateral(),
+        _barra_lateral(tema),
         html.Main([
-            _cabecera(),
+            _cabecera(cfg.ui.usuario),
             html.Div([
                 _vista_medicion(),
                 _vista_calculos(),
@@ -215,4 +250,4 @@ def crear_layout(cfg: AppConfig, modo_inicial: str) -> html.Div:
             ], className="contenido"),
         ], className="principal"),
         html.Div(id="aviso", className="toasts", **{"aria-live": "assertive"}),
-    ], className="app")
+    ], id="app", className=f"app tema-{tema}")
