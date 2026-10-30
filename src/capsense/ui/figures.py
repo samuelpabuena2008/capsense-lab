@@ -59,9 +59,18 @@ def _area_brillante(fig: go.Figure, x, y, rgb: str, nombre: str, hover: str, cus
     ))
 
 
+def unidad_carga(c_uf_max: float, v_entrada: float) -> tuple[float, str]:
+    """(divisor, unidad) para Q en µC: si la carga máxima pasa de 1000 µC se muestra en mC."""
+    return (1000.0, "mC") if c_uf_max * v_entrada >= 1000 else (1.0, "µC")
+
+
 def curva_carga(calculados: Sequence[ph.RunCalculado], seleccion: str, cal: Calibracion,
-                uirevision: str = "", p: Paleta = AMBAR) -> go.Figure:
-    """Curva de carga. seleccion = "todas" o el número de prueba como texto."""
+                uirevision: str = "", p: Paleta = AMBAR, magnitud: str = "v") -> go.Figure:
+    """Curva de carga. seleccion = "todas" o el número de prueba como texto.
+
+    magnitud = "v": voltaje del capacitor V(t). magnitud = "q": carga almacenada Q(t) = C·V(t), con la C
+    calculada de cada prueba (tiene la misma forma que V(t), escalada por C).
+    """
     if not calculados:
         return vacia("Sin datos todavía · pulsa Medir", p)
     if seleccion != "todas":
@@ -76,11 +85,19 @@ def curva_carga(calculados: Sequence[ph.RunCalculado], seleccion: str, cal: Cali
         t_fin = max(t_fin, 5.2 * rc.ajuste.tau if una else 0, t_ult, rc.ajuste.t2 * 1.3)
     k, unidad = _escala_tiempo(t_fin)
     v = cal.v_entrada / cal.adc_max
+    es_q = magnitud == "q"
+    div_q, u_q = unidad_carga(max(rc.c_uf for rc in elegidas), cal.v_entrada)
     fig = _base(go.Figure(), p)
-    hover = f"t = %{{x:.3f}} {unidad}<br>V = %{{y:.3f}} V<br>ADC = %{{customdata}}<extra></extra>"
+    if es_q:
+        hover = (f"t = %{{x:.3f}} {unidad}<br>Q = %{{y:.4g}} {u_q}<br>ADC = %{{customdata}}<extra></extra>")
+    else:
+        hover = f"t = %{{x:.3f}} {unidad}<br>V = %{{y:.3f}} V<br>ADC = %{{customdata}}<extra></extra>"
+    v_base = v
 
     for idx, rc in enumerate(elegidas):
         aj, run = rc.ajuste, rc.run
+        # cuentas ADC -> unidad del eje (V, o µC/mC con la C de esta prueba)
+        v = v_base * (rc.c_uf / div_q if es_q else 1.0)
         color_prueba = p.pruebas[calculados.index(rc) % len(p.pruebas)]
         t = np.linspace(0, t_fin, 400)
         adc = aj.P * (1 - np.exp(-t / aj.tau))
@@ -109,8 +126,12 @@ def curva_carga(calculados: Sequence[ph.RunCalculado], seleccion: str, cal: Cali
 
     if una:
         aj = elegidas[0].ajuste
+        if es_q:
+            meseta_txt = f"Q máx = C·V_P = {aj.P * v:.4g} {u_q} · {aj.P / cal.adc_max * 100:.1f} %"
+        else:
+            meseta_txt = f"meseta P = {aj.P:.1f} · {aj.P / cal.adc_max * 100:.1f} %"
         fig.add_hline(y=aj.P * v, line=dict(color=p.texto_3, width=1.5, dash="dash"),
-                      annotation=dict(text=f"meseta P = {aj.P:.1f} · {aj.P / cal.adc_max * 100:.1f} %",
+                      annotation=dict(text=meseta_txt,
                                       font=dict(size=12, color=p.texto_2), xanchor="right", x=1, yanchor="bottom"))
         v_tau = aj.P * ph.FRACCION_TAU
         for n_tau in (1, 2, 3, 5):
@@ -131,18 +152,30 @@ def curva_carga(calculados: Sequence[ph.RunCalculado], seleccion: str, cal: Cali
                                xref="paper", yref="paper", x=0.99, y=0.04, xanchor="right", showarrow=False,
                                font=dict(size=12, color=p.texto_3))
 
-    y_max = cal.v_entrada * 1.08
-    fig.add_trace(go.Scatter(x=[0], y=[0], yaxis="y2", mode="markers", marker=dict(opacity=0), hoverinfo="skip",
-                             showlegend=False))
+    v_max = cal.v_entrada * 1.08
+    if es_q:
+        y_max = v_max * max(rc.c_uf for rc in elegidas) / div_q
+        y_titulo = f"carga Q ({u_q})"
+        # con una prueba, el eje derecho muestra el voltaje equivalente (Q = C·V)
+        eje2 = dict(title=dict(text="voltaje (V)", font=dict(size=12, color=p.texto_3)), range=[0, v_max]) if una \
+            else None
+    else:
+        y_max = v_max
+        y_titulo = "voltaje (V)"
+        eje2 = dict(title=dict(text="ADC", font=dict(size=12, color=p.texto_3)), range=[0, v_max / v_base])
+    if eje2:
+        fig.add_trace(go.Scatter(x=[0], y=[0], yaxis="y2", mode="markers", marker=dict(opacity=0),
+                                 hoverinfo="skip", showlegend=False))
     fig.update_layout(
         uirevision=uirevision or "curva", hovermode="closest", showlegend=not una,
         legend=dict(orientation="h", yanchor="bottom", y=1.0, x=0, font=dict(size=12, color=p.texto_2),
                     bgcolor="rgba(0,0,0,0)"),
         xaxis=dict(title=dict(text=f"tiempo ({unidad})", font=dict(size=12, color=p.texto_3)), rangemode="tozero"),
-        yaxis=dict(title=dict(text="voltaje (V)", font=dict(size=12, color=p.texto_3)), range=[0, y_max]),
-        yaxis2=dict(title=dict(text="ADC", font=dict(size=12, color=p.texto_3)), overlaying="y", side="right",
-                    range=[0, y_max / v], showgrid=False, tickfont=dict(size=12, color=p.texto_3)),
+        yaxis=dict(title=dict(text=y_titulo, font=dict(size=12, color=p.texto_3)), range=[0, y_max]),
     )
+    if eje2:
+        fig.update_layout(yaxis2=dict(overlaying="y", side="right", showgrid=False,
+                                      tickfont=dict(size=12, color=p.texto_3), **eje2))
     return fig
 
 

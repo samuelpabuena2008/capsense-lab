@@ -13,7 +13,7 @@ Proyecto de Samuel y Joel (Ingeniería de Sistemas, Universidad del Norte) para 
 ## Qué muestra
 
 - **Resultado grande**, legible a 3 m: C con unidad automática (µF o mF), ± valor y ± %, rango usado (10 kΩ o 1 MΩ), número de pruebas, meseta y aviso rojo si la fuga es alta.
-- **Curva de carga** interactiva: muestras reales (firmware v2.2), curva ajustada $V(t) = P(1-e^{-t/\tau})$, los cruces t₁ (ADC 250) y t₂ (ADC 700), la meseta punteada, τ (63.2 % de P) y guías en 2τ, 3τ y 5τ. Eje secundario en cuentas del ADC. Cada prueba por separado o todas superpuestas.
+- **Curva de carga** interactiva (botón para ver el voltaje V(t) o la carga Q(t) = C·V(t)): muestras reales (firmware v2.2), curva ajustada $V(t) = P(1-e^{-t/\tau})$, los cruces t₁ (ADC 250) y t₂ (ADC 700), la meseta punteada, τ (63.2 % de P) y guías en 2τ, 3τ y 5τ. Eje secundario en cuentas del ADC. Cada prueba por separado o todas superpuestas.
 - **Cálculos paso a paso** con los números de la medición sustituidos: razón t₂/t₁ → bisección para P → τ₁, τ₂ → τ → C → promedio → incertidumbre → Q y E. Python recalcula todo desde t₁ y t₂ y marca **✓ coincide con el firmware** o la diferencia.
 - C de cada prueba con la media y la banda de incertidumbre, tarjetas con τ, R, V, Q y E, historial de la sesión y exportación CSV.
 

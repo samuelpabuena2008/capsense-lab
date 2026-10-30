@@ -27,10 +27,17 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:
     g = guion.construir(medicion, cal, pines)
     g.datos["r_descarga"] = cal.r_descarga + cal.r_pin
     g.datos["escala"] = grafica.escala(g.datos)[0]
+    g.datos["c_real_uf"] = C_EJEMPLO_UF
 
-    @app.callback(Output("sim-datos", "data"), Output("sim-graf", "figure"), Input("tema", "data"))
-    def preparar(tema):
-        return g.datos, grafica.figura(g.datos, paleta(tema))
+    @app.callback(Output("sim-datos", "data"), Output("sim-graf", "figure"), Output("sim-graf-titulo", "children"),
+                  Input("tema", "data"), Input("sim-magnitud", "value"))
+    def preparar(tema, magnitud):
+        magnitud = magnitud or "v"
+        factor, _titulo, unidad = grafica.factor_magnitud(g.datos, magnitud)
+        datos = dict(g.datos, factor_y=factor)        # el navegador escala la meseta animada con este factor
+        titulo = (f"Carga en el capacitor (Q = C·V, C = {C_EJEMPLO_UF:g} µF)" if magnitud == "q"
+                  else "Voltaje en el capacitor")
+        return datos, grafica.figura(datos, paleta(tema), magnitud=magnitud), titulo
 
     app.clientside_callback(
         """

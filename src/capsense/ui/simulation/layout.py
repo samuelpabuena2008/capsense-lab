@@ -68,7 +68,10 @@ def vista(cfg: AppConfig) -> html.Section:
                     ], className="sim-panel-scroll"),
                 ], className="card sim-card-panel"),
                 html.Div([
-                    html.Div([html.H2("Voltaje en el capacitor")], className="card-cab"),
+                    html.Div([html.H2("Voltaje en el capacitor", id="sim-graf-titulo"),
+                              dcc.RadioItems(id="sim-magnitud", value="v", inline=True, className="segmentado chico",
+                                             options=[{"label": "V(t)", "value": "v"},
+                                                      {"label": "Q(t)", "value": "q"}])], className="card-cab"),
                     dcc.Graph(id="sim-graf", className="graf", config={"displaylogo": False, "responsive": True,
                                                                        "displayModeBar": False}),
                 ], className="card sim-card-graf"),

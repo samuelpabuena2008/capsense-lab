@@ -387,24 +387,28 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
 
     @app.callback(
         Output("graf-curva", "figure"), Output("pasos", "children"), Output("pasos-sub", "children"),
-        Output("nota-curva", "children"),
+        Output("nota-curva", "children"), Output("formula-curva", "children"),
         Input("ver", "data"), Input("sel-medicion", "value"), Input("sel-prueba", "value"), Input("tema", "data"),
+        Input("magnitud-curva", "value"),
     )
-    def curva_y_pasos(_ver, sel, sel_prueba, tema):
+    def curva_y_pasos(_ver, sel, sel_prueba, tema, magnitud):
         p = paleta(tema)
+        magnitud = magnitud or "v"
+        formula = "Q(t) = C · V(t) = C·P·(1 − e^(−t/τ))" if magnitud == "q" else "V(t) = P · (1 − e^(−t/τ))"
         v = session.snapshot()
         m, _ = _elegir_medicion(v.mediciones, sel)
         if m is None or not m.runs:
             return (figures.vacia("Sin datos todavía · pulsa Medir", p),
                     html.Div("Aquí aparecen las fórmulas con los números de la medición, paso a paso.",
-                             className="vacio-msg"), "Mide. Ajusta. Explica.", "")
+                             className="vacio-msg"), "Mide. Ajusta. Explica.", "", formula)
         calc = _calcular(m, cal)
         if not calc:
             raise PreventUpdate
         sel_prueba = sel_prueba or "ultima"
         if sel_prueba == "ultima":
             sel_prueba = str(calc[-1].run.i)
-        fig = figures.curva_carga(calc, sel_prueba, cal, uirevision=f"{m.id}-{sel_prueba}-{tema}", p=p)
+        fig = figures.curva_carga(calc, sel_prueba, cal, uirevision=f"{m.id}-{sel_prueba}-{tema}-{magnitud}", p=p,
+                                  magnitud=magnitud)
         elegida = next((rc for rc in calc if str(rc.run.i) == sel_prueba), calc[-1])
         p_prueba = steps.pasos_prueba(elegida, cal)
         p_res = steps.pasos_resumen(m, calc, cal) if m.completa else []
@@ -421,7 +425,9 @@ def registrar(app: dash.Dash, ctl: Controlador) -> None:  # noqa: C901 - un bloq
             aj = elegida.ajuste
             nota = (f"prueba {elegida.run.i} · t₁ = {aj.t1 / 1000:.2f} ms · t₂ = {aj.t2 / 1000:.2f} ms · "
                     f"{len(elegida.run.samples)} muestras")
-        return fig, bloques, sub, nota
+        if magnitud == "q":
+            nota += f" · Q = C·V con C = {elegida.c_uf:.4g} µF"
+        return fig, bloques, sub, nota, formula
 
     @app.callback(
         Output("grupo-arduino", "style"), Output("grupo-replay", "style"), Output("panel-demo", "style"),

@@ -102,7 +102,12 @@ def _vista_medicion() -> html.Section:
         html.Div(id="kpis", className="kpis"),
         html.Div([
             html.Div([html.Div([html.H2("Curva de carga"), html.Div(id="nota-curva", className="card-nota")]),
-                      html.Span("V(t) = P · (1 − e^(−t/τ))", className="formula-chip")], className="card-cab"),
+                      html.Div([
+                          html.Span("V(t) = P · (1 − e^(−t/τ))", id="formula-curva", className="formula-chip"),
+                          dcc.RadioItems(id="magnitud-curva", value="v", inline=True, className="segmentado chico",
+                                         options=[{"label": "V(t) voltaje", "value": "v"},
+                                                  {"label": "Q(t) carga", "value": "q"}]),
+                      ], className="grupo")], className="card-cab"),
             dcc.Graph(id="graf-curva", className="graf graf-curva",
                       config={"displaylogo": False, "responsive": True,
                               "modeBarButtonsToRemove": ["lasso2d", "select2d"],

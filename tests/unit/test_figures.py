@@ -57,3 +57,30 @@ def test_tema_en_config(tmp_path):
 def test_saludo(hora, esperado):
     from datetime import datetime
     assert layout.saludo("Samuel", datetime(2026, 10, 29, hora)) == f"{esperado}, Samuel"
+
+
+def test_curva_q_es_c_por_v(cal):
+    """Q(t) = C·V(t): misma forma que V(t), escalada por la C de la prueba, en µC (o mC)."""
+    mediciones = sesion_con_mediciones(cal, n=1)
+    calc = [ph.recalcular_run(r, cal) for r in mediciones[-1].runs]
+    rc = calc[-1]
+    fv = figures.curva_carga(calc, str(rc.run.i), cal, magnitud="v")
+    fq = figures.curva_carga(calc, str(rc.run.i), cal, magnitud="q")
+    medido_v = next(t for t in fv.data if (t.name or "").startswith("Medido"))
+    medido_q = next(t for t in fq.data if (t.name or "").startswith("Medido"))
+    for yv, yq in zip(medido_v.y, medido_q.y, strict=True):
+        assert yq == pytest.approx(yv * rc.c_uf)
+    assert "µC" in fq.layout.yaxis.title.text and "voltaje" in fq.layout.yaxis2.title.text
+    assert figures.unidad_carga(1000.0, 4.92) == (1000.0, "mC")
+    assert figures.unidad_carga(100.0, 4.92) == (1.0, "µC")
+
+
+def test_grafica_simulacion_en_q(cal):
+    from capsense.domain import simulation as sim
+    from capsense.ui.simulation import grafica, guion
+    pines = config.cargar().pines
+    g = guion.construir(sim.simular_medicion(100.0, cal), cal, pines)
+    g.datos["c_real_uf"] = 100.0
+    fv, fq = grafica.figura(g.datos, paleta("ambar")), grafica.figura(g.datos, paleta("ambar"), magnitud="q")
+    assert max(fq.data[0].y) == pytest.approx(max(fv.data[0].y) * 100.0)
+    assert fq.layout.yaxis.title.text == "carga Q (µC)"

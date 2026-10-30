@@ -183,7 +183,8 @@
     if (idx.length) window.Plotly.restyle(g, { visible: val }, idx);
     const m = S.d.marcas || {};
     const upd = { "shapes[1].visible": vis.ajuste && !!m.p_v, "shapes[0].visible": p.serie === S.d.guia };
-    if (m.p_v) { upd["shapes[1].y0"] = m.p_v; upd["shapes[1].y1"] = m.p_v; }
+    const fy = S.d.factor_y || 1;
+    if (m.p_v) { upd["shapes[1].y0"] = m.p_v * fy; upd["shapes[1].y1"] = m.p_v * fy; }
     window.Plotly.relayout(g, upd);
   }
   function moverCursor(t) {
@@ -196,7 +197,7 @@
     const upd = { "shapes[0].x0": x, "shapes[0].x1": x };
     if (p.id === "ajuste" && p.biseccion) {
       const n = p.biseccion.length, j = Math.min(n - 1, Math.floor(S.prog * n));
-      const y = p.biseccion[j] / 1023 * S.d.vin;
+      const y = p.biseccion[j] / 1023 * S.d.vin * (S.d.factor_y || 1);
       upd["shapes[1].y0"] = y; upd["shapes[1].y1"] = y; upd["shapes[1].visible"] = true;
       const tt = el("sim-tiempo");
       if (tt) tt.textContent = `Bisección: iteración ${j + 1} de ${n} · P = ${p.biseccion[j].toFixed(2)} cuentas`;

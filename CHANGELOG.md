@@ -2,6 +2,12 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.6.0] - 2026-10-30
+
+### Gráfica de carga Q(t)
+- Botón **V(t) / Q(t)** en la curva de la vista Medición y en la gráfica de la Simulación.
+- Q(t) = C·V(t): la misma curva escalada por la C calculada de cada prueba (en µC, o mC si pasa de 1000 µC), con la meseta como Q máx = C·V_P y el voltaje equivalente en el eje derecho.
+
 ## [0.5.0] - 2026-10-29
 
 ### Simulación del circuito
