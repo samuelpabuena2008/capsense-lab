@@ -2,6 +2,18 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.5.0] - 2026-10-29
+
+### Simulación del circuito
+- Nueva vista **Simulación** (tecla 5): animación paso a paso de cómo mide el circuito, siguiendo el firmware v2.1 (LCD y LEDs como los escribe el .ino, D3 en LOW durante la pausa, descarga apenas llega a t2, autorango).
+- Dos dibujos del mismo circuito: esquema eléctrico y la protoboard real, con las posiciones de `docs/referencia/montaje.html` (copiado al repo).
+- Corriente animada en el sentido real, capacitor que se llena, estado de cada pin, LEDs, LCD y curva V(t) con cursor.
+- Pasos como datos en `ui/simulation/steps_data.py`; posiciones del montaje en `ui/simulation/board_layout.py`; pines en `[pines]` de `config/capsense.toml` (sin números repetidos en el código).
+- Física de carga, descarga y fuga en `domain/simulation.py`, probada contra fórmulas analíticas y contra `physics.py`.
+
+### Hallazgo
+- El firmware corta la descarga en ADC ≤ 5 y espera solo 100 ms: con capacitores grandes la carga arranca con voltaje residual y C sale baja (≈ −1 % a 100 µF, ≈ −4 % a 1000 µF). Ver `docs/calculos.md`.
+
 ## [0.4.0] - 2026-10-29
 
 ### Diseño

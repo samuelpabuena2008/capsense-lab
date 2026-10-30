@@ -94,6 +94,10 @@ El simulador reproduce el bucle real del Uno: `micros()` con resolución de 4 µ
 | 10–100 µF | < 0.4 % | < 0.9 % | < 0.8 % | < 0.1 % | < 0.1 % | < 0.7 % |
 | 220–1000 µF | < 0.7 % | **−1.59 %** | −1.30 % | < 0.1 % | < 0.3 % | < 0.6 % |
 
+### Voltaje residual al empezar a cargar (todas las versiones)
+
+El firmware termina de descargar cuando el ADC lee 5 o menos y después espera solo 100 ms. Con un capacitor grande la descarga por 585 Ω es lenta (τ = 585 Ω · 1000 µF ≈ 0.59 s), así que la carga arranca con unas 4–5 cuentas todavía en el capacitor. El modelo supone que arranca en 0 V: t₁ y t₂ salen un poco cortos, la razón t₂/t₁ cambia y el ajuste baja la meseta. Resultado (simulado con `domain/simulation.py`): C sale ≈ 1 % baja con 100 µF y ≈ 4 % baja con 1000 µF. Se corregiría descargando hasta ADC = 0 y esperando unas 5·τ de descarga, o midiendo ese voltaje inicial y restándolo en el ajuste. El simulador de la demo (`simulator_source.py`) arranca cada carga en 0 V y no lo muestra; la pestaña Simulación sí.
+
 ### Por qué fallaba la v2.2 (y la v2.1, que mide igual)
 
 1. **Capacitores chicos en 10 kΩ con fuga (1 a 5 µF).** t1 dura pocos ms y el firmware anota el tiempo de la *primera lectura* que pasa el umbral: el cruce real ocurrió hasta una vuelta antes (~116 µs). Eso cambia la razón t2/t1 y, con fuga, el ajuste de P amplifica el error.

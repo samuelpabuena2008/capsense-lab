@@ -19,6 +19,14 @@ Proyecto de Samuel y Joel (Ingeniería de Sistemas, Universidad del Norte) para 
 
 ![Panel de cálculos paso a paso](docs/img/pasos.jpg)
 
+## Simulación del circuito
+
+La vista **Simulación** (tecla `5`) es una animación para explicarle al público cómo mide el circuito: dibuja **nuestro montaje** (el esquema o la protoboard real de `docs/referencia/montaje.html`) y recorre, paso a paso, lo que hace el firmware v2.1: descarga por la 560 Ω, pausa, carga por la 10 kΩ (o la 1 MΩ con autorango), los cruces t₁ y t₂, el ajuste, las repeticiones y el resultado. En cada paso se ve qué pines están en 5 V, en tierra, desconectados o midiendo; por dónde va la corriente (puntos animados); cómo se llena el capacitor; los LEDs y la pantalla LCD; y una frase simple de qué está pasando. Modo **paso a paso** (Anterior/Siguiente) o **automático** (avanza solo y se repite).
+
+![Simulación: descarga del capacitor por la resistencia de 560 Ω](docs/img/sim-descarga.jpg)
+
+![Simulación en la vista protoboard: cables activos resaltados](docs/img/sim-protoboard.jpg)
+
 ## Diseño
 
 Dos temas que se cambian desde la barra lateral (o con `[ui] tema` en `config/capsense.toml`):
